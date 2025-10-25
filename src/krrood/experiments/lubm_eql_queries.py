@@ -2,6 +2,8 @@ import itertools
 import time
 from typing import List
 
+import pytest
+
 from krrood.entity_query_language.entity import (
     symbolic_mode,
     a,
@@ -10,6 +12,7 @@ from krrood.entity_query_language.entity import (
     set_of,
     the,
 )
+from krrood.entity_query_language.fast_eval import evaluate_fast
 from krrood.entity_query_language.predicate import HasType
 from krrood.entity_query_language.symbol_graph import SymbolGraph
 from krrood.entity_query_language.symbolic import ResultQuantifier
@@ -224,3 +227,13 @@ if __name__ == "__main__":
         print(f"{i}:{n} ({times[i - 1]} sec)")
         print({type(r) for r in results[i - 1]})
     print(f"Time elapsed: {end_time - start_time} seconds")
+    for i, q in enumerate(get_eql_queries()):
+        it = evaluate_fast(q)
+        if it is None:
+            print("fast path not applicable for this query")
+            continue
+        start = time.time()
+        fast_count = sum(1 for _ in it)
+        end = time.time()
+        print(f"Fast path took {end - start} seconds")
+        assert fast_count == counts[i]
