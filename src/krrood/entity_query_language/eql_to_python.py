@@ -40,6 +40,7 @@ class CodegenError(Exception):
     falling back to generic code paths, but it exists to make the interface
     harder to misuse and future-proof against unsupported constructs.
     """
+
     pass
 
 
@@ -68,9 +69,10 @@ class PrecomputeEntry:
                    during precomputation.
     """
 
-    var: 'Variable'
+    var: "Variable"
     attr_paths: Set[Tuple[str, ...]] = field(default_factory=set)
     filters: List[PrecomputeFilter] = field(default_factory=list)
+
 
 from .cache_data import get_cache_keys_for_class_, yield_class_values_from_cache
 from .predicate import Predicate, HasType, Symbol
@@ -85,6 +87,7 @@ from .symbolic import (
     SetOf,
     Variable,
     Literal,
+    AND,
 )
 
 
@@ -136,16 +139,20 @@ class _Env:
         prev_lower = False
         for ch in name:
             if ch.isupper() and prev_lower:
-                out.append('_')
+                out.append("_")
             out.append(ch.lower())
             prev_lower = ch.islower()
-        return ''.join(out)
+        return "".join(out)
 
-    def bind_name_for(self, node: CanBehaveLikeAVariable, suggested: Optional[str]) -> str:
+    def bind_name_for(
+        self, node: CanBehaveLikeAVariable, suggested: Optional[str]
+    ) -> str:
         node_id = id(node)
         if node_id in self.names:
             return self.names[node_id]
-        base_raw = (suggested or getattr(getattr(node, "_name__", None), "strip", lambda: "")()).strip() or node.__class__.__name__.lower()
+        base_raw = (
+            suggested or getattr(getattr(node, "_name__", None), "strip", lambda: "")()
+        ).strip() or node.__class__.__name__.lower()
         base_raw = base_raw.replace(".", "_")
         base = self._to_snake(base_raw)
         # Avoid Python keywords and builtins like 'str', 'list', etc.
@@ -153,12 +160,82 @@ class _Env:
             base = f"{base}_value"
         name = base
         idx = 1
-        while name in self.used_names or not name.isidentifier() or keyword.iskeyword(name) or name in dir(builtins):
+        while (
+            name in self.used_names
+            or not name.isidentifier()
+            or keyword.iskeyword(name)
+            or name in dir(builtins)
+        ):
             name = f"{base}_{idx}"
             idx += 1
         self.used_names.add(name)
         self.names[node_id] = name
         return name
+
+
+@dataclass
+class _ConditionEmitter:
+    """
+    Small strategy object that knows how to emit code for a specific kind of
+    condition node. Instances are stateless and delegate to _Codegen helpers.
+    """
+
+    def emit(self, cg: "_Codegen", cond) -> None:  # pragma: no cover - abstract
+        raise NotImplementedError
+
+
+@dataclass
+class _AndEmitter(_ConditionEmitter):
+    """Emits the children of an AND node sequentially."""
+
+    def emit(self, cg: "_Codegen", cond) -> None:
+        for ch in cond._children_:
+            cg._emit_condition(ch)
+
+
+@dataclass
+class _ComparatorEmitter(_ConditionEmitter):
+    """Emits a Comparator condition (==, !=, contains, ...)."""
+
+    def emit(self, cg: "_Codegen", cond) -> None:
+        cg._emit_condition_comparator(cond)
+
+
+@dataclass
+class _PredicateEmitter(_ConditionEmitter):
+    """Emits a predicate Variable condition, with HasType fast-path."""
+
+    def emit(self, cg: "_Codegen", cond) -> None:
+        cg._emit_condition_predicate(cond)
+
+
+@dataclass
+class _DescriptorEmitter(_ConditionEmitter):
+    """Emits a nested descriptor condition via any()."""
+
+    def emit(self, cg: "_Codegen", cond) -> None:
+        cg._emit_condition_descriptor(cond)
+
+
+@dataclass
+class _TruthyEmitter(_ConditionEmitter):
+    """Fallback emitter: truthiness of an arbitrary value/expression."""
+
+    def emit(self, cg: "_Codegen", cond) -> None:
+        cg._emit_condition_truthy(cond)
+
+
+def _emitter_for(cond) -> _ConditionEmitter:
+    """Return an emitter strategy object for the given condition node."""
+    if isinstance(cond, AND):
+        return _AndEmitter()
+    if isinstance(cond, Comparator):
+        return _ComparatorEmitter()
+    if isinstance(cond, Predicate):
+        return _PredicateEmitter()
+    if isinstance(cond, QueryObjectDescriptor):
+        return _DescriptorEmitter()
+    return _TruthyEmitter()
 
 
 class _Codegen:
@@ -211,7 +288,7 @@ class _Codegen:
         for cls in self._referenced_classes():
             scope[cls.__name__] = cls
         exec(source, scope, scope)
-        return CompiledQuery(source=source, function=scope["compiled_query"]) 
+        return CompiledQuery(source=source, function=scope["compiled_query"])
 
     def _referenced_classes(self) -> List[type]:
         """
@@ -226,7 +303,7 @@ class _Codegen:
         # All Variable instances in the query
         try:
             variables = self.q._all_variable_instances_
-        except Exception:
+        except AttributeError:
             variables = []
         for v in variables:
             t = getattr(v, "_type_", None)
@@ -235,6 +312,7 @@ class _Codegen:
 
         # Traverse conditions to find predicate and type references
         visited: set[int] = set()
+
         def visit(node):
             if node is None:
                 return
@@ -248,7 +326,7 @@ class _Codegen:
                 if isinstance(t, type):
                     classes[t.__name__] = t
                 # Inspect kwargs for type references (e.g., HasType.types_)
-                for val in getattr(node, "_kwargs_", {}).values():
+                for val in (node._kwargs_ or {}).values():
                     if isinstance(val, type):
                         classes[val.__name__] = val
             # Recurse children when available
@@ -257,10 +335,13 @@ class _Codegen:
             # Domain mappings and attributes: descend to child
             if hasattr(node, "_child_"):
                 visit(getattr(node, "_child_"))
+
         visit(self.q._child_)
         return list(classes.values())
 
-    def _collect_hoistable_variables(self, cond, selected: List[CanBehaveLikeAVariable]) -> List[Variable]:
+    def _collect_hoistable_variables(
+        self, cond, selected: List[CanBehaveLikeAVariable]
+    ) -> List[Variable]:
         """
         Collect variables that appear only in the condition tree and are independent
         of the selected base variables. Those variables can be bound (and any loops
@@ -278,7 +359,10 @@ class _Codegen:
             t = getattr(var, "_type_", None)
             if not (isinstance(t, type) and issubclass(t, Symbol)):
                 return
-            if issubclass(t, Predicate) or getattr(var, "_predicate_type_", None) is not None:
+            if (
+                issubclass(t, Predicate)
+                or getattr(var, "_predicate_type_", None) is not None
+            ):
                 return
             if id(var) in selected_roots:
                 return
@@ -315,7 +399,9 @@ class _Codegen:
         visit(cond)
         return hoist
 
-    def _extract_var_and_attr_path(self, expr: CanBehaveLikeAVariable) -> Optional[Tuple[Variable, Tuple[str, ...]]]:
+    def _extract_var_and_attr_path(
+        self, expr: CanBehaveLikeAVariable
+    ) -> Optional[Tuple[Variable, Tuple[str, ...]]]:
         """
         If the expression is an Attribute chain rooted at a Variable (possibly wrapped),
         return (var, attr_path). Unwrap wrappers like ResultQuantifier (the/an) and
@@ -334,16 +420,14 @@ class _Codegen:
             unwrapped_once = False
             if isinstance(node, ResultQuantifier):
                 desc = node._child_
-                try:
-                    selected = getattr(desc, "selected_variables", None) or []
-                    if selected:
-                        node = selected[0]
-                        unwrapped_once = True
-                        continue
-                except Exception:
-                    pass
+                selected = getattr(desc, "selected_variables", []) or []
+                if selected:
+                    node = selected[0]
+                    unwrapped_once = True
+                    continue
             # Unwrap query descriptors like Entity/SetOf to reach their selected variables
             from .symbolic import QueryObjectDescriptor
+
             if isinstance(node, QueryObjectDescriptor):
                 selected = getattr(node, "selected_variables", None) or []
                 if selected:
@@ -359,12 +443,19 @@ class _Codegen:
             return node, tuple(path)
         return None
 
-    def _is_independent_symbol_var(self, var: Variable, selected: List[CanBehaveLikeAVariable]) -> bool:
+    def _is_independent_symbol_var(
+        self, var: Variable, selected: List[CanBehaveLikeAVariable]
+    ) -> bool:
         roots = {id(v) for v in self._selected_base_variables(selected)}
         if id(var) in roots:
             return False
         t = getattr(var, "_type_", None)
-        return isinstance(t, type) and issubclass(t, Symbol) and not issubclass(t, Predicate) and getattr(var, "_predicate_type_", None) is None
+        return (
+            isinstance(t, type)
+            and issubclass(t, Symbol)
+            and not issubclass(t, Predicate)
+            and getattr(var, "_predicate_type_", None) is None
+        )
 
     def _plan_precomputations(self, cond, selected: List[CanBehaveLikeAVariable]):
         """
@@ -384,12 +475,9 @@ class _Codegen:
             vid = id(v)
             if vid not in plan:
                 plan[vid] = PrecomputeEntry(var=v)
-                try:
-                    for k, val in (getattr(v, "_kwargs_", {}) or {}).items():
-                        if not isinstance(val, CanBehaveLikeAVariable):
-                            plan[vid].filters.append(PrecomputeFilter((k,), val))
-                except Exception:
-                    pass
+                for k, val in (v._kwargs_ or {}).items():
+                    if not isinstance(val, CanBehaveLikeAVariable):
+                        plan[vid].filters.append(PrecomputeFilter((k,), val))
             return plan[vid]
 
         def visit(node):
@@ -402,7 +490,11 @@ class _Codegen:
             if isinstance(node, Comparator):
                 op = node._name_
                 if op == "contains":
-                    res = self._extract_var_and_attr_path(node.left) if isinstance(node.left, CanBehaveLikeAVariable) else None
+                    res = (
+                        self._extract_var_and_attr_path(node.left)
+                        if isinstance(node.left, CanBehaveLikeAVariable)
+                        else None
+                    )
                     if res is not None:
                         var, path = res
                         if self._is_independent_symbol_var(var, selected):
@@ -412,23 +504,39 @@ class _Codegen:
                     visit(node.right)
                     return
                 if op == "==":
-                    left_res = self._extract_var_and_attr_path(node.left) if isinstance(node.left, CanBehaveLikeAVariable) else None
-                    right_is_lit = not isinstance(node.right, CanBehaveLikeAVariable) or isinstance(node.right, Literal)
-                    right_val = node.right._domain_source_.domain[0] if isinstance(node.right, Literal) else node.right
-                    if left_res is None and isinstance(node.right, CanBehaveLikeAVariable):
+                    left_res = (
+                        self._extract_var_and_attr_path(node.left)
+                        if isinstance(node.left, CanBehaveLikeAVariable)
+                        else None
+                    )
+                    right_is_lit = not isinstance(
+                        node.right, CanBehaveLikeAVariable
+                    ) or isinstance(node.right, Literal)
+                    right_val = (
+                        node.right._domain_source_.domain[0]
+                        if isinstance(node.right, Literal)
+                        else node.right
+                    )
+                    if left_res is None and isinstance(
+                        node.right, CanBehaveLikeAVariable
+                    ):
                         right_res = self._extract_var_and_attr_path(node.right)
                         left_is_lit = not isinstance(node.left, CanBehaveLikeAVariable)
                         if right_res is not None and left_is_lit:
                             left_val = node.left
                             var, path = right_res
                             if self._is_independent_symbol_var(var, selected):
-                                ensure_entry(var).filters.append(PrecomputeFilter(path, left_val))
+                                ensure_entry(var).filters.append(
+                                    PrecomputeFilter(path, left_val)
+                                )
                                 self._consumed_conditions.add(nid)
                             return
                     if left_res is not None and right_is_lit:
                         var, path = left_res
                         if self._is_independent_symbol_var(var, selected):
-                            ensure_entry(var).filters.append(PrecomputeFilter(path, right_val))
+                            ensure_entry(var).filters.append(
+                                PrecomputeFilter(path, right_val)
+                            )
                             self._consumed_conditions.add(nid)
                         return
                 visit(node.left)
@@ -446,14 +554,25 @@ class _Codegen:
         visit(cond)
         return plan
 
-    def _gather_literal_filters_for_var(self, subtree, target_var: 'Variable', entry: PrecomputeEntry) -> None:
+    def _gather_literal_filters_for_var(
+        self, subtree, target_var: "Variable", entry: PrecomputeEntry
+    ) -> None:
         """Collect literal equality filters under subtree for the given variable."""
+
         def walk(n):
             if n is None:
                 return
             if isinstance(n, Comparator) and n._name_ == "==":
-                lres = self._extract_var_and_attr_path(n.left) if isinstance(n.left, CanBehaveLikeAVariable) else None
-                rres = self._extract_var_and_attr_path(n.right) if isinstance(n.right, CanBehaveLikeAVariable) else None
+                lres = (
+                    self._extract_var_and_attr_path(n.left)
+                    if isinstance(n.left, CanBehaveLikeAVariable)
+                    else None
+                )
+                rres = (
+                    self._extract_var_and_attr_path(n.right)
+                    if isinstance(n.right, CanBehaveLikeAVariable)
+                    else None
+                )
                 var_cls = getattr(target_var, "_type_", None)
                 if isinstance(n.right, Literal):
                     right_is_lit = True
@@ -467,11 +586,19 @@ class _Codegen:
                 else:
                     left_is_lit = not isinstance(n.left, CanBehaveLikeAVariable)
                     left_val = n.left
-                if lres is not None and getattr(lres[0], "_type_", None) is var_cls and right_is_lit:
+                if (
+                    lres is not None
+                    and getattr(lres[0], "_type_", None) is var_cls
+                    and right_is_lit
+                ):
                     entry.filters.append(PrecomputeFilter(lres[1], right_val))
                     self._consumed_conditions.add(id(n))
                     return
-                if rres is not None and getattr(rres[0], "_type_", None) is var_cls and left_is_lit:
+                if (
+                    rres is not None
+                    and getattr(rres[0], "_type_", None) is var_cls
+                    and left_is_lit
+                ):
                     entry.filters.append(PrecomputeFilter(rres[1], left_val))
                     self._consumed_conditions.add(id(n))
                     return
@@ -479,6 +606,7 @@ class _Codegen:
                 walk(ch)
             if hasattr(n, "_child_"):
                 walk(getattr(n, "_child_"))
+
         walk(subtree)
 
     def _emit_precomputations(self, plan: Dict[int, PrecomputeEntry]) -> None:
@@ -498,7 +626,9 @@ class _Codegen:
                 self._emit_collect_items_into_set(var_tmp, path, set_name)
             self.env.indent -= 1
 
-    def _allocate_precompute_sets(self, var: 'Variable', paths: Set[Tuple[str, ...]]) -> Dict[Tuple[str, ...], str]:
+    def _allocate_precompute_sets(
+        self, var: "Variable", paths: Set[Tuple[str, ...]]
+    ) -> Dict[Tuple[str, ...], str]:
         """Allocate set variables for each attribute path and register them."""
         set_names: Dict[Tuple[str, ...], str] = {}
         for path in paths:
@@ -508,16 +638,20 @@ class _Codegen:
             self._precomputed_sets[(id(var), path)] = set_name
         return set_names
 
-    def _begin_domain_loop(self, var: 'Variable', cls: type) -> str:
+    def _begin_domain_loop(self, var: "Variable", cls: type) -> str:
         """Begin a loop over all instances of the variable's class and return loop var name."""
-        base_raw = (getattr(var, "_name__", None) or var.__class__.__name__).replace(".", "_")
+        base_raw = (getattr(var, "_name__", None) or var.__class__.__name__).replace(
+            ".", "_"
+        )
         base = self.env._to_snake(base_raw)
         var_tmp = self.env.new_tmp(base)
         self.env.add(f"for {var_tmp} in _iterate_instances({cls.__name__}):")
         self.env.indent += 1
         return var_tmp
 
-    def _dedupe_precompute_filters(self, filters: List[PrecomputeFilter]) -> List[PrecomputeFilter]:
+    def _dedupe_precompute_filters(
+        self, filters: List[PrecomputeFilter]
+    ) -> List[PrecomputeFilter]:
         """Remove duplicate filters while preserving order."""
         unique: List[PrecomputeFilter] = []
         seen: Set[Tuple[Tuple[str, ...], object]] = set()
@@ -525,7 +659,7 @@ class _Codegen:
             try:
                 key = (f.path, f.value)
                 hash(key)
-            except Exception:
+            except TypeError:
                 key = (f.path, repr(f.value))  # type: ignore[assignment]
             if key in seen:
                 continue
@@ -533,7 +667,9 @@ class _Codegen:
             unique.append(f)
         return unique
 
-    def _emit_filter_checks(self, var_tmp: str, filters: List[PrecomputeFilter]) -> None:
+    def _emit_filter_checks(
+        self, var_tmp: str, filters: List[PrecomputeFilter]
+    ) -> None:
         """Emit early-continue checks for precompute filters."""
         for f in filters:
             attr_expr = var_tmp
@@ -545,7 +681,9 @@ class _Codegen:
             self.env.add("continue")
             self.env.indent -= 1
 
-    def _emit_collect_items_into_set(self, var_tmp: str, path: Tuple[str, ...], set_name: str) -> None:
+    def _emit_collect_items_into_set(
+        self, var_tmp: str, path: Tuple[str, ...], set_name: str
+    ) -> None:
         """Emit a loop that collects items from the given attribute path into the set."""
         items_expr = var_tmp
         for a in path:
@@ -553,7 +691,9 @@ class _Codegen:
         tmp_iter = self.env.new_tmp("_iter")
         item_tmp = self.env.new_tmp("item")
         self.env.add(f"{tmp_iter} = {items_expr}")
-        self.env.add(f"{tmp_iter} = {tmp_iter} if hasattr({tmp_iter}, '__iter__') and not isinstance({tmp_iter}, (str, bytes)) else [{tmp_iter}]")
+        self.env.add(
+            f"{tmp_iter} = {tmp_iter} if hasattr({tmp_iter}, '__iter__') and not isinstance({tmp_iter}, (str, bytes)) else [{tmp_iter}]"
+        )
         self.env.add(f"for {item_tmp} in {tmp_iter}:")
         self.env.indent += 1
         self.env.add(f"{set_name}.add({item_tmp})")
@@ -570,7 +710,9 @@ class _Codegen:
             self._emit_condition(descriptor._child_)
         self._emit_yield(descriptor, selected)
 
-    def _emit_plan_and_precompute(self, descriptor: QueryObjectDescriptor, selected: List[CanBehaveLikeAVariable]) -> None:
+    def _emit_plan_and_precompute(
+        self, descriptor: QueryObjectDescriptor, selected: List[CanBehaveLikeAVariable]
+    ) -> None:
         """Plan and emit precomputations, and create outer loops for base variables."""
         plan = self._plan_precomputations(descriptor._child_, selected)
         self._emit_precomputations(plan)
@@ -582,11 +724,15 @@ class _Codegen:
         for sv in selected:
             self._bind(sv)
 
-    def _emit_yield(self, descriptor: QueryObjectDescriptor, selected: List[CanBehaveLikeAVariable]) -> None:
+    def _emit_yield(
+        self, descriptor: QueryObjectDescriptor, selected: List[CanBehaveLikeAVariable]
+    ) -> None:
         """Emit the appropriate yield depending on descriptor type."""
         if isinstance(descriptor, SetOf):
             items = ", ".join(self.env.names[id(v)] for v in selected)
-            dm_names = [self.env.names[id(v)] for v in selected if isinstance(v, DomainMapping)]
+            dm_names = [
+                self.env.names[id(v)] for v in selected if isinstance(v, DomainMapping)
+            ]
             if dm_names:
                 cond = " and ".join(dm_names)
                 self.env.add(f"if not ({cond}):")
@@ -607,10 +753,13 @@ class _Codegen:
             else:
                 self.env.add("yield None")
 
-    def _selected_base_variables(self, selected: List[CanBehaveLikeAVariable]) -> List[Variable]:
+    def _selected_base_variables(
+        self, selected: List[CanBehaveLikeAVariable]
+    ) -> List[Variable]:
         # Collect base Variables from selected expressions only (ignore conditions)
         roots: List[Variable] = []
         seen: Set[int] = set()
+
         def visit(expr: Optional[CanBehaveLikeAVariable]):
             if expr is None:
                 return
@@ -619,16 +768,19 @@ class _Codegen:
                 node = node._child_
             if isinstance(node, Variable):
                 # Exclude predicate variables
-                cls = getattr(node, "_type_", None)
-                if isinstance(cls, type) and not issubclass(cls, Predicate) and getattr(node, "_predicate_type_", None) is None:
+                cls = node._type_
+                if cls and not node._predicate_type_:
                     if id(node) not in seen:
                         seen.add(id(node))
                         roots.append(node)
+
         for s in selected:
             visit(s)
         return roots
 
-    def _bind(self, expr: CanBehaveLikeAVariable, suggested: Optional[str] = None) -> str:
+    def _bind(
+        self, expr: CanBehaveLikeAVariable, suggested: Optional[str] = None
+    ) -> str:
         """Bind an expression to a Python variable name in the current scope."""
         node_id = id(expr)
         if node_id in self.env.names:
@@ -645,7 +797,7 @@ class _Codegen:
             return self._bind_domain_mapping(expr)
         return self._bind_constant(expr)
 
-    def _bind_variable(self, expr: 'Variable') -> str:
+    def _bind_variable(self, expr: "Variable") -> str:
         """Bind a Variable, emitting outer iteration when needed."""
         name = self.env.bind_name_for(expr, getattr(expr, "_name__", None))
         cls = expr._type_
@@ -654,25 +806,21 @@ class _Codegen:
             self.env.indent += 1
             return name
         # Non-Symbol: try to bind from domain or iterate constants
-        try:
-            dom = getattr(expr, "_domain_source_", None)
-            if dom is not None and hasattr(dom, "domain"):
-                raw_vals = list(dom.domain)
-                vals = [getattr(v, "value", v) for v in raw_vals]
-                if len(vals) == 1:
-                    self.env.add(f"{name} = {repr(vals[0])}")
-                    return name
-                if len(vals) > 1:
-                    lst = ", ".join(repr(v) for v in vals)
-                    self.env.add(f"for {name} in [{lst}]:")
-                    self.env.indent += 1
-                    return name
-        except Exception:
-            pass
+        dom = expr._domain_source_
+        if dom is not None:
+            vals = [v.value for v in dom.domain]
+            if len(vals) == 1:
+                self.env.add(f"{name} = {repr(vals[0])}")
+                return name
+            if len(vals) > 1:
+                lst = ", ".join(repr(v) for v in vals)
+                self.env.add(f"for {name} in [{lst}]:")
+                self.env.indent += 1
+                return name
         self.env.add(f"{name} = {repr(getattr(expr, '_name__', name))}")
         return name
 
-    def _bind_result_quantifier(self, expr: 'ResultQuantifier') -> str:
+    def _bind_result_quantifier(self, expr: "ResultQuantifier") -> str:
         """Bind a ResultQuantifier by binding its selected variables and conditions."""
         descriptor = expr._child_
         for var in self._selected_base_variables(descriptor.selected_variables):
@@ -687,25 +835,27 @@ class _Codegen:
         self.env.add(f"{name} = None")
         return name
 
-    def _bind_attribute(self, expr: 'Attribute') -> str:
+    def _bind_attribute(self, expr: "Attribute") -> str:
         """Bind an Attribute by binding its parent and assigning the access."""
         parent_name = self._bind(expr._child_, None)
         name = self.env.bind_name_for(expr, f"{parent_name}_{expr._attr_name_}")
         self.env.add(f"{name} = {parent_name}.{expr._attr_name_}")
         return name
 
-    def _bind_flatten(self, expr: 'Flatten') -> str:
+    def _bind_flatten(self, expr: "Flatten") -> str:
         """Bind a Flatten by emitting a for-loop over the parent value."""
         parent_name = self._bind(expr._child_, None)
         name = self.env.bind_name_for(expr, self.env.new_tmp("flat"))
         tmp_iter = self.env.new_tmp("_iter")
         self.env.add(f"{tmp_iter} = {parent_name}")
-        self.env.add(f"{tmp_iter} = {tmp_iter} if hasattr({tmp_iter}, '__iter__') and not isinstance({tmp_iter}, (str, bytes)) else [{tmp_iter}]")
+        self.env.add(
+            f"{tmp_iter} = {tmp_iter} if hasattr({tmp_iter}, '__iter__') and not isinstance({tmp_iter}, (str, bytes)) else [{tmp_iter}]"
+        )
         self.env.add(f"for {name} in {tmp_iter}:")
         self.env.indent += 1
         return name
 
-    def _bind_domain_mapping(self, expr: 'DomainMapping') -> str:
+    def _bind_domain_mapping(self, expr: "DomainMapping") -> str:
         """Bind a DomainMapping by binding its child and assigning the value."""
         parent_name = self._bind(expr._child_, None)
         name = self.env.bind_name_for(expr, self.env.new_tmp("map"))
@@ -719,29 +869,18 @@ class _Codegen:
         return name
 
     def _emit_condition(self, cond) -> None:
-        """Emit Python conditions for a condition node, delegating to helpers."""
+        """Emit Python conditions for a condition node via strategy dispatch."""
         if cond is None or id(cond) in self._consumed_conditions:
             return
-        if cond.__class__.__name__ == 'AND':
-            self._emit_condition_and(cond)
-            return
-        if isinstance(cond, Comparator):
-            self._emit_condition_comparator(cond)
-            return
-        if self._is_predicate_node(cond):
-            self._emit_condition_predicate(cond)
-            return
-        if isinstance(cond, QueryObjectDescriptor):
-            self._emit_condition_descriptor(cond)
-            return
-        self._emit_condition_truthy(cond)
+        emitter = _emitter_for(cond)
+        emitter.emit(self, cond)
 
     def _emit_condition_and(self, cond) -> None:
         """Emit a chain of conditions for an AND node."""
         for ch in cond._children_:
             self._emit_condition(ch)
 
-    def _emit_condition_comparator(self, cond: 'Comparator') -> None:
+    def _emit_condition_comparator(self, cond: "Comparator") -> None:
         """Emit a comparator condition with contains optimization when possible."""
         if id(cond) in self._consumed_conditions:
             return
@@ -750,11 +889,15 @@ class _Codegen:
             return
         _, left_expr = self._compile_value(cond.left)
         _, right_expr = self._compile_value(cond.right)
-        expr = f"({right_expr}) in ({left_expr})" if op == "contains" else f"({left_expr}) {op} ({right_expr})"
+        expr = (
+            f"({right_expr}) in ({left_expr})"
+            if op == "contains"
+            else f"({left_expr}) {op} ({right_expr})"
+        )
         self.env.add(f"if {expr}:")
         self.env.indent += 1
 
-    def _emit_contains_optimized(self, cond: 'Comparator') -> bool:
+    def _emit_contains_optimized(self, cond: "Comparator") -> bool:
         """Try to emit an optimized contains using a precomputed membership set."""
         if not isinstance(cond.left, CanBehaveLikeAVariable):
             return False
@@ -773,14 +916,22 @@ class _Codegen:
 
     def _is_predicate_node(self, node) -> bool:
         """Return True if node is a predicate Variable."""
-        return isinstance(node, CanBehaveLikeAVariable) and isinstance(getattr(node, "_type_", None), type) and issubclass(node._type_, Predicate)
+        return (
+            isinstance(node, CanBehaveLikeAVariable)
+            and isinstance(getattr(node, "_type_", None), type)
+            and issubclass(node._type_, Predicate)
+        )
 
     def _emit_condition_predicate(self, cond) -> None:
         """Emit predicate evaluation, using isinstance fast path for HasType."""
         kwargs = cond._kwargs_
-        if issubclass(cond._type_, HasType) and 'variable' in kwargs and 'types_' in kwargs:
-            _, var_expr = self._compile_value(kwargs['variable'])
-            type_cls = kwargs['types_']
+        if (
+            issubclass(cond._type_, HasType)
+            and "variable" in kwargs
+            and "types_" in kwargs
+        ):
+            _, var_expr = self._compile_value(kwargs["variable"])
+            type_cls = kwargs["types_"]
             self.env.add(f"if isinstance({var_expr}, {type_cls.__name__}):")
             self.env.indent += 1
             return
@@ -792,7 +943,7 @@ class _Codegen:
         self.env.add(f"if {call_expr}:")
         self.env.indent += 1
 
-    def _emit_condition_descriptor(self, cond: 'QueryObjectDescriptor') -> None:
+    def _emit_condition_descriptor(self, cond: "QueryObjectDescriptor") -> None:
         """Emit an any() check for a nested descriptor condition."""
         inner_fn = self.env.new_tmp("_inner_any")
         self.env.add(f"def {inner_fn}():")
@@ -808,7 +959,9 @@ class _Codegen:
         self.env.add(f"if {expr}:")
         self.env.indent += 1
 
-    def _compile_value(self, expr: Union[CanBehaveLikeAVariable, object]) -> Tuple[str, str]:
+    def _compile_value(
+        self, expr: Union[CanBehaveLikeAVariable, object]
+    ) -> Tuple[str, str]:
         # Returns (name, python_expression) for expr; ensures necessary loops/assignments emitted
         if isinstance(expr, CanBehaveLikeAVariable):
             # If expr includes a Flatten, ensure loop is emitted by binding
