@@ -1914,50 +1914,27 @@ class Comparator(BinaryOperator):
                 yield from self.yield_final_output_from_cache(sources)
                 return
 
-        first_operand, second_operand = self.get_first_second_operands(sources)
-        first_operand._eval_parent_ = self
-        second_operand._eval_parent_ = self
+        first_operand, second_operand, use_sg = self.get_first_second_operands(
+            sources, yield_when_false
+        )
         second_path = second_operand._path_
+        second_depends_on_first = second_operand._unique_variables_.intersection(
+            first_operand._unique_variables_
+        )
         base_second = self.operands_base_var[second_operand]
-        base_first = self.operands_base_var[first_operand]
         first_values = first_operand._evaluate__(sources)
         allowed_second_values_cache = None
         for first_value in first_values:
             operand_value_map = {first_operand._id_: first_value[first_operand._id_]}
-            use_sg = self.operation in (operator.eq, operator.contains) and bool(
-                second_path
-            )
             if use_sg:
-                # Build the set of allowed end-values for the second operand under current bindings
-                if allowed_second_values_cache is None:
-                    allowed_second_values_cache = {
-                        sv[base_second._id_]
-                        for sv in base_second._evaluate__(first_value)
-                    }
-                # Start traversal from the base variable's bound instance if available
-                current_node = first_value[first_operand._id_].value
-                for second_node, node_path in self.dfs_sg(
-                    current_node, [p[0] for p in second_path]
-                ):
-                    second_value = HashedValue(
-                        second_node.instance
-                        if isinstance(second_node, WrappedInstance)
-                        else second_node
-                    )
-                    if second_value in allowed_second_values_cache:
-                        values = {**first_value}
-                        # Bind the second operand (end of the path)
-                        values[base_second._id_] = second_value
-                        values[self._id_] = HV_TRUE
-                        node_path.reverse()
-                        for i, (rel, expr) in enumerate(second_path):
-                            val = (
-                                HashedValue(node_path[i + 1])
-                                if not isinstance(node_path[i + 1], WrappedInstance)
-                                else HashedValue(node_path[i + 1].instance)
-                            )
-                            values[expr._id_] = val
-                        yield values
+                yield from self.join_via_symbol_graph(
+                    first_value,
+                    first_operand,
+                    second_path,
+                    second_depends_on_first,
+                    base_second,
+                    allowed_second_values_cache,
+                )
                 continue
 
             second_values = second_operand._evaluate__(first_value)
@@ -1975,20 +1952,84 @@ class Comparator(BinaryOperator):
                     self.update_cache(values)
                     yield values
 
+    def join_via_symbol_graph(
+        self,
+        first_value,
+        first_operand,
+        second_path,
+        second_depends_on_first,
+        base_second,
+        allowed_second_values_cache,
+    ) -> Iterable[Dict[int, HashedValue]]:
+        # Build the set of allowed end-values for the second operand under current bindings
+        if second_depends_on_first or allowed_second_values_cache is None:
+            allowed_second_values_cache = {
+                sv[base_second._id_] for sv in base_second._evaluate__(first_value)
+            }
+        # Start traversal from the base variable's bound instance if available
+        current_node = first_value[first_operand._id_].value
+        for second_node, node_path in self.dfs_sg(
+            current_node, [p[0] for p in second_path]
+        ):
+            second_value = HashedValue(
+                second_node.instance
+                if isinstance(second_node, WrappedInstance)
+                else second_node
+            )
+            if second_value in allowed_second_values_cache:
+                values = {**first_value}
+                # Bind the second operand (end of the path)
+                values[base_second._id_] = second_value
+                values[self._id_] = HV_TRUE
+                node_path.reverse()
+                for i, (rel, expr) in enumerate(second_path):
+                    val = (
+                        HashedValue(node_path[i + 1])
+                        if not isinstance(node_path[i + 1], WrappedInstance)
+                        else HashedValue(node_path[i + 1].instance)
+                    )
+                    values[expr._id_] = val
+                yield values
+
     def apply_operation(self, operand_values: Dict[int, HashedValue]):
         return self.operation(
             operand_values[self.left._id_].value, operand_values[self.right._id_].value
         )
 
     def get_first_second_operands(
-        self, sources: Dict[int, HashedValue]
-    ) -> Tuple[CanBehaveLikeAVariable, CanBehaveLikeAVariable]:
+        self,
+        sources: Dict[int, HashedValue],
+        yield_when_false: bool = False,
+    ) -> Tuple[CanBehaveLikeAVariable, CanBehaveLikeAVariable, bool]:
         if sources and any(
             v.value._var_._id_ in sources for v in self.right._unique_variables_
         ):
-            return self.right, self.left
+            first_operand, second_operand = self.right, self.left
         else:
-            return self.left, self.right
+            first_operand, second_operand = self.left, self.right
+        first_operand._eval_parent_ = self
+        second_operand._eval_parent_ = self
+        first_path = first_operand._path_
+        second_path = second_operand._path_
+        use_sg = (
+            not yield_when_false
+            and self.operation in (operator.eq, operator.contains)
+            and (bool(second_path) or bool(first_path))
+            and all(
+                not isinstance(op, Literal) for op in (first_operand, second_operand)
+            )
+        )
+        if use_sg and all(
+            any(v.value._var_._id_ in sources for v in operand._unique_variables_)
+            for operand in (first_operand, second_operand)
+        ):
+            normalized_first_len = len([a for a in first_path if a[0]])
+            normalized_second_len = len([a for a in second_path if a[0]])
+            if normalized_first_len == 0 and normalized_second_len == 0:
+                use_sg = False
+            elif normalized_second_len > normalized_first_len:
+                first_operand, second_operand = second_operand, first_operand
+        return first_operand, second_operand, use_sg
 
     def get_result_domain(
         self, operand_value_map: Dict[CanBehaveLikeAVariable, HashedValue]
