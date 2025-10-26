@@ -1899,7 +1899,6 @@ class Comparator(BinaryOperator):
         first_operand, second_operand = self.get_first_second_operands(sources)
         first_operand._eval_parent_ = self
         second_operand._eval_parent_ = self
-        first_path = first_operand._path_
         second_path = second_operand._path_
         second_var = self.operands_base_var[second_operand]
         first_values = first_operand._evaluate__(sources)
@@ -1907,10 +1906,10 @@ class Comparator(BinaryOperator):
         for first_value in first_values:
             operand_value_map = {first_operand._id_: first_value[first_operand._id_]}
             if self.operation in (operator.eq, operator.contains) and second_path:
-                # if not second_values:
-                second_values = {
-                    s[second_var._id_] for s in second_var._evaluate__(first_value)
-                }
+                if not second_values:
+                    second_values = {
+                        s[second_var._id_] for s in second_var._evaluate__(sources)
+                    }
                 # use paths and the symbol graph to find the second value instead of doing a cartesian product
                 current_node = first_value[first_operand._id_].value
                 for second_node, node_path in self.dfs_sg(
@@ -1934,8 +1933,6 @@ class Comparator(BinaryOperator):
                             )
                             values[expr._id_] = val
                         yield values
-                        # if second_var not in self._root_._child_.selected_variables:
-                        #     break
                 continue
 
             second_values = second_operand._evaluate__(first_value)
