@@ -7,6 +7,7 @@ from copy import copy
 from line_profiler import profile
 
 from . import logger
+from .context_vars import is_compiled_evaluator_enabled
 from .enums import EQLMode, PredicateType
 from .rxnode import RWXNode, ColorLegend
 from .symbol_graph import SymbolGraph
@@ -23,7 +24,6 @@ comparison operators) and the evaluation mechanics.
 import contextvars
 import operator
 import typing
-import os
 from abc import abstractmethod, ABC
 from dataclasses import dataclass, field, fields
 from functools import lru_cache, cached_property
@@ -61,45 +61,6 @@ if TYPE_CHECKING:
     from .conclusion import Conclusion
 
 _symbolic_mode = contextvars.ContextVar("symbolic_mode", default=None)
-# Feature flag for using compiled evaluator instead of per-node generators, managed like caching switches
-_env_compiled_flag = os.getenv("KRROOD_USE_COMPILED_EVALUATOR", "0") not in ("0", "false", "False", None)
-_compiled_evaluator_enabled = contextvars.ContextVar(
-    "compiled_evaluator_enabled", default=_env_compiled_flag
-)
-
-def enable_compiled_evaluator() -> None:
-    """
-    Enable the compiled evaluator fast-paths.
-    """
-    _compiled_evaluator_enabled.set(True)
-
-
-def disable_compiled_evaluator() -> None:
-    """
-    Disable the compiled evaluator fast-paths.
-    """
-    _compiled_evaluator_enabled.set(False)
-
-
-def is_compiled_evaluator_enabled() -> bool:
-    """
-    Check whether the compiled evaluator is enabled.
-    """
-    return _compiled_evaluator_enabled.get()
-
-
-def use_compiled_evaluator(enabled: bool = True) -> None:
-    """
-    Backward-compatible toggle for the compiled evaluator.
-
-    When enabled, ResultQuantifier.evaluate() may execute a single evaluator
-    compiled from the whole query instead of per-node evaluation. This keeps
-    public APIs intact while improving performance.
-    """
-    if enabled:
-        enable_compiled_evaluator()
-    else:
-        disable_compiled_evaluator()
 
 
 def _set_symbolic_mode(mode: EQLMode):
@@ -515,15 +476,15 @@ class ResultQuantifier(CanBehaveLikeAVariable[T], ABC):
         self._compiled_query_ = None
 
     def _compiled_iterator_(self):
-        if not is_compiled_evaluator_enabled() or getattr(self._child_, "rule_mode", False):
+        if not is_compiled_evaluator_enabled() or getattr(
+            self._child_, "rule_mode", False
+        ):
             return None
-        try:
-            if self._compiled_query_ is None:
-                from .eql_to_python import compile_to_python
-                self._compiled_query_ = compile_to_python(self).function
-            return self._compiled_query_()
-        except Exception:
-            return None
+        if self._compiled_query_ is None:
+            from .eql_to_python import compile_to_python
+
+            self._compiled_query_ = compile_to_python(self).function
+        return self._compiled_query_() if self._compiled_query_ else None
 
     def _map_compiled_set_of_(self, value_tuple):
         selected = self._child_.selected_variables
@@ -578,6 +539,7 @@ class ResultQuantifier(CanBehaveLikeAVariable[T], ABC):
         compiled_gen = self._compiled_iterator_()
         if compiled_gen is None:
             return None
+
         def _gen():
             try:
                 if isinstance(self._child_, SetOf):
@@ -591,6 +553,7 @@ class ResultQuantifier(CanBehaveLikeAVariable[T], ABC):
                         yield item
             finally:
                 self._reset_cache_()
+
         return _gen()
 
     @abstractmethod
