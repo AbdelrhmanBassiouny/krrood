@@ -16,7 +16,7 @@ from ..class_diagrams.class_diagram import Association
 from ..entity_query_language.property_descriptor import PropertyDescriptor
 
 # from .lubm_with_predicates import *
-from ..entity_query_language.symbol_graph import SymbolGraph
+from ..entity_query_language.symbol_graph import SymbolGraph, PredicateRelation
 from ..ormatic.utils import classes_of_module
 
 
@@ -289,6 +289,21 @@ def load_instances(
                 field_name = snake
 
         role_taker_val = symbol_graph.get_role_takers_of_instance(subj)
+        if role_taker_val:
+            role_taker_assoc = (
+                symbol_graph.type_graph.get_role_taker_associations_of_cls(subj_cls)
+            )
+            symbol_graph.add_relation(
+                PredicateRelation(
+                    symbol_graph.get_wrapped_instance(subj),
+                    symbol_graph.get_wrapped_instance(role_taker_val),
+                    [
+                        f
+                        for f in symbol_graph.get_wrapped_instance(subj).fields
+                        if f.public_name == role_taker_assoc.field.public_name
+                    ][0],
+                )
+            )
 
         if isinstance(o, Literal):
             if field_name and hasattr(subj, field_name):

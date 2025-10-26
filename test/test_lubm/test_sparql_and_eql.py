@@ -19,7 +19,8 @@ def test_eql_counts_match_sparql():
     # expected = evaluate_sparql(rdf_graph, sparql_queries)
 
     registry = load_instances_for_lubm_with_predicates()
-    actual, _, _ = evaluate_eql(get_eql_queries())
-
+    actual, _, _ = evaluate_eql(get_eql_queries(clear_graph=False))
+    assert actual[6] == 67
+    assert actual[8] == 208
     # test only the first query for now as the queries of sparql are not correct yet.
     # assert actual[0] == expected[0]

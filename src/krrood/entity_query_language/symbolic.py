@@ -1844,7 +1844,8 @@ class Comparator(BinaryOperator):
         traced_path = traced_path or []
         if is_iterable(current_node):
             for cn in current_node:
-                yield from self.dfs_sg(cn, path, visited, copy(traced_path))
+                # Use independent copies of path and traced_path for each branch
+                yield from self.dfs_sg(cn, copy(path), visited, copy(traced_path))
             return
         traced_path.append(current_node)
         if not path:
@@ -1857,17 +1858,34 @@ class Comparator(BinaryOperator):
         visited.add(current_node)
         current_edge = path.pop()
         while current_edge is None:
+            # None marks a Flatten/no-edge hop: record current node as a step
             traced_path.append(current_node)
+            if not path:
+                # No more real edges to follow; we've satisfied the path
+                yield current_node, traced_path
+                return
             current_edge = path.pop()
+        sg = SymbolGraph()
         field_pd = current_edge.field.property_descriptor
         if not field_pd:
-            return
-        for new_node in SymbolGraph().get_incoming_neighbors_with_predicate_type(
-            current_node, type(current_edge.field.property_descriptor)
-        ):
-            yield from self.dfs_sg(
-                new_node, copy(path[:-1]), visited, copy(traced_path)
+            # No concrete predicate edge (e.g., role-taker or structural step):
+            # treat as an epsilon transition by keeping the current node and advancing the path.
+            incoming_edges = sg.get_in_edges(current_node)
+            incoming = [
+                e.source
+                for e in incoming_edges
+                if isinstance(e.predicate, WrappedField)
+                and e.predicate.public_name == current_edge.field.public_name
+            ]
+        else:
+            # Traverse edges matching the predicate type in either direction to be robust
+            pred_type = type(current_edge.field.property_descriptor)
+            incoming = sg.get_incoming_neighbors_with_predicate_type(
+                current_node, pred_type
             )
+        for new_node in set(list(incoming)):
+            # Pass the remaining path as-is; current_edge was already popped above
+            yield from self.dfs_sg(new_node, copy(path), visited, copy(traced_path))
 
     @profile
     def _evaluate__(
@@ -1900,17 +1918,23 @@ class Comparator(BinaryOperator):
         first_operand._eval_parent_ = self
         second_operand._eval_parent_ = self
         second_path = second_operand._path_
-        second_var = self.operands_base_var[second_operand]
+        base_second = self.operands_base_var[second_operand]
+        base_first = self.operands_base_var[first_operand]
         first_values = first_operand._evaluate__(sources)
-        second_values = None
+        allowed_second_values_cache = None
         for first_value in first_values:
             operand_value_map = {first_operand._id_: first_value[first_operand._id_]}
-            if self.operation in (operator.eq, operator.contains) and second_path:
-                if not second_values:
-                    second_values = {
-                        s[second_var._id_] for s in second_var._evaluate__(sources)
+            use_sg = self.operation in (operator.eq, operator.contains) and bool(
+                second_path
+            )
+            if use_sg:
+                # Build the set of allowed end-values for the second operand under current bindings
+                if allowed_second_values_cache is None:
+                    allowed_second_values_cache = {
+                        sv[base_second._id_]
+                        for sv in base_second._evaluate__(first_value)
                     }
-                # use paths and the symbol graph to find the second value instead of doing a cartesian product
+                # Start traversal from the base variable's bound instance if available
                 current_node = first_value[first_operand._id_].value
                 for second_node, node_path in self.dfs_sg(
                     current_node, [p[0] for p in second_path]
@@ -1920,10 +1944,11 @@ class Comparator(BinaryOperator):
                         if isinstance(second_node, WrappedInstance)
                         else second_node
                     )
-                    if second_value in second_values:
-                        operand_value_map[second_var._id_] = second_value
-                        values = {**first_value, **operand_value_map}
-                        values[self._id_] = HashedValue(True)
+                    if second_value in allowed_second_values_cache:
+                        values = {**first_value}
+                        # Bind the second operand (end of the path)
+                        values[base_second._id_] = second_value
+                        values[self._id_] = HV_TRUE
                         node_path.reverse()
                         for i, (rel, expr) in enumerate(second_path):
                             val = (

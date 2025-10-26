@@ -16,6 +16,7 @@ from typing_extensions import (
     Dict,
     ClassVar,
     Set,
+    Union,
 )
 
 from .attribute_introspector import DescriptorAwareIntrospector
@@ -32,7 +33,7 @@ if TYPE_CHECKING:
 class PredicateRelation(Relation):
     source: WrappedInstance
     target: WrappedInstance
-    predicate: Predicate
+    predicate: Union[Predicate, WrappedField]
     inferred: bool = False
 
     def __str__(self):
@@ -54,7 +55,12 @@ class WrappedInstance:
 
     @cached_property
     def fields(self) -> List[WrappedField]:
-        return [WrappedField(self.instance, f) for f in fields(self.instance)]
+        return [
+            f
+            for f in self._symbol_graph_.type_graph.get_wrapped_class(
+                type(self.instance)
+            ).fields
+        ]
 
     @property
     def name(self):
