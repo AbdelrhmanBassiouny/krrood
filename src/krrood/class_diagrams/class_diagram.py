@@ -309,6 +309,14 @@ class ClassDiagram:
         ]
         return tuple(out_edges)
 
+    @lru_cache(maxsize=None)
+    def get_in_edges(self, cls: Union[Type, WrappedClass]) -> Tuple[Relation, ...]:
+        wrapped_cls = self.get_wrapped_class(cls)
+        out_edges = [
+            edge for _, _, edge in self._dependency_graph.in_edges(wrapped_cls.index)
+        ]
+        return tuple(out_edges)
+
     def to_subdiagram_without_inherited_associations(
         self,
         include_field_name: bool = False,

@@ -53,11 +53,13 @@ from .cache_data import (
     yield_class_values_from_cache,
 )
 from .failures import MultipleSolutionFound, NoSolutionFound
-from .utils import IDGenerator, is_iterable, generate_combinations
+from .utils import IDGenerator, is_iterable, generate_combinations, make_set
 from .hashed_data import HashedValue, HashedIterable, T, HV_TRUE, HV_FALSE
+from .symbol_graph import WrappedInstance
 
 if TYPE_CHECKING:
     from .conclusion import Conclusion
+    from .predicate import Symbol
 
 _symbolic_mode = contextvars.ContextVar("symbolic_mode", default=None)
 
@@ -376,7 +378,9 @@ class CanBehaveLikeAVariable(SymbolicExpression[T], ABC):
     For example, this is the case for the ResultQuantifiers & QueryDescriptors that operate on a single selected
     variable.
     """
-    _path_: List[Relation] = field(init=False, default_factory=list)
+    _path_: List[Tuple[Relation, CanBehaveLikeAVariable]] = field(
+        init=False, default_factory=list
+    )
     """
     The path of the variable in the symbol graph as a sequence of relation instances.
     """
@@ -1370,16 +1374,10 @@ class Attribute(DomainMapping):
         super().__post_init__()
         with symbolic_mode(mode=None):
             if self._child_wrapped_cls_:
-                self._path_ = self._child_._path_ + [
-                    Association(
-                        self._child_wrapped_cls_,
-                        self._wrapped_type_,
-                        self._wrapped_field_,
-                    )
-                ]
+                self._update_path_()
 
     def _update_path_(self):
-        self._path_ = self._child_._path_ + [self._relation_]
+        self._path_ = self._child_._path_ + [(self._relation_, self)]
 
     @cached_property
     def _relation_(self):
@@ -1469,7 +1467,7 @@ class Flatten(DomainMapping):
         if not isinstance(self._child_, SymbolicExpression):
             self._child_ = Literal(self._child_)
         super().__post_init__()
-        self._path_ = self._child_._path_
+        self._path_ = self._child_._path_ + [(None, self)]
 
     def _apply_mapping_(self, value: HashedValue) -> Iterable[HashedValue]:
         inner = value.value
@@ -1771,6 +1769,25 @@ class Comparator(BinaryOperator):
         operator.gt: ">",
         operator.ge: ">=",
     }
+    operands_base_var: Dict[CanBehaveLikeAVariable, Variable] = field(
+        init=False, default_factory=dict
+    )
+
+    def __post_init__(self):
+        super().__post_init__()
+        self.operands_base_var[self.left] = self.get_base_var(self.left)
+        self.operands_base_var[self.right] = self.get_base_var(self.right)
+
+    @staticmethod
+    @lru_cache(maxsize=None)
+    def get_base_var(operand: CanBehaveLikeAVariable) -> Variable:
+        base_var = operand
+        while not isinstance(base_var, Variable):
+            while isinstance(base_var, (ResultQuantifier, QueryObjectDescriptor)):
+                base_var = base_var._var_
+            while isinstance(base_var, (Attribute, Flatten)):
+                base_var = base_var._child_
+        return base_var
 
     @property
     def _invert_(self):
@@ -1817,6 +1834,41 @@ class Comparator(BinaryOperator):
         super()._reset_only_my_cache_()
         self._cache_.clear()
 
+    def dfs_sg(
+        self,
+        current_node: typing.Union[Symbol, WrappedInstance],
+        path: List,
+        visited: typing.Set[typing.Union[Symbol, WrappedInstance]] = None,
+        traced_path: List = None,
+    ) -> Iterable[Tuple[typing.Union[Symbol, WrappedInstance]]]:
+        traced_path = traced_path or []
+        if is_iterable(current_node):
+            for cn in current_node:
+                yield from self.dfs_sg(cn, path, visited, copy(traced_path))
+            return
+        traced_path.append(current_node)
+        if not path:
+            yield current_node, traced_path
+            return
+        if visited is None:
+            visited = set()
+        if current_node in visited:
+            return
+        visited.add(current_node)
+        current_edge = path.pop()
+        while current_edge is None:
+            traced_path.append(current_node)
+            current_edge = path.pop()
+        field_pd = current_edge.field.property_descriptor
+        if not field_pd:
+            return
+        for new_node in SymbolGraph().get_incoming_neighbors_with_predicate_type(
+            current_node, type(current_edge.field.property_descriptor)
+        ):
+            yield from self.dfs_sg(
+                new_node, copy(path[:-1]), visited, copy(traced_path)
+            )
+
     @profile
     def _evaluate__(
         self,
@@ -1833,7 +1885,6 @@ class Comparator(BinaryOperator):
          only two values, the left and right symbolic values.
         """
         sources = sources or {}
-        self._yield_when_false_ = yield_when_false
 
         if self._id_ in sources:
             yield sources
@@ -1847,11 +1898,46 @@ class Comparator(BinaryOperator):
 
         first_operand, second_operand = self.get_first_second_operands(sources)
         first_operand._eval_parent_ = self
+        second_operand._eval_parent_ = self
+        first_path = first_operand._path_
+        second_path = second_operand._path_
+        second_var = self.operands_base_var[second_operand]
         first_values = first_operand._evaluate__(sources)
+        second_values = None
         for first_value in first_values:
-            first_value.update(sources)
             operand_value_map = {first_operand._id_: first_value[first_operand._id_]}
-            second_operand._eval_parent_ = self
+            if self.operation in (operator.eq, operator.contains) and second_path:
+                # if not second_values:
+                second_values = {
+                    s[second_var._id_] for s in second_var._evaluate__(first_value)
+                }
+                # use paths and the symbol graph to find the second value instead of doing a cartesian product
+                current_node = first_value[first_operand._id_].value
+                for second_node, node_path in self.dfs_sg(
+                    current_node, [p[0] for p in second_path]
+                ):
+                    second_value = HashedValue(
+                        second_node.instance
+                        if isinstance(second_node, WrappedInstance)
+                        else second_node
+                    )
+                    if second_value in second_values:
+                        operand_value_map[second_var._id_] = second_value
+                        values = {**first_value, **operand_value_map}
+                        values[self._id_] = HashedValue(True)
+                        node_path.reverse()
+                        for i, (rel, expr) in enumerate(second_path):
+                            val = (
+                                HashedValue(node_path[i + 1])
+                                if not isinstance(node_path[i + 1], WrappedInstance)
+                                else HashedValue(node_path[i + 1].instance)
+                            )
+                            values[expr._id_] = val
+                        yield values
+                        # if second_var not in self._root_._child_.selected_variables:
+                        #     break
+                continue
+
             second_values = second_operand._evaluate__(first_value)
             for second_value in second_values:
                 operand_value_map[second_operand._id_] = second_value[
@@ -1859,11 +1945,11 @@ class Comparator(BinaryOperator):
                 ]
                 res = self.apply_operation(operand_value_map)
                 self._is_false_ = not res
-                if res or self._yield_when_false_:
+                if res or yield_when_false:
                     values = copy(first_value)
                     values.update(second_value)
                     values.update(operand_value_map)
-                    values[self._id_] = HashedValue(res)
+                    second_value[self._id_] = HashedValue(res)
                     self.update_cache(values)
                     yield values
 
@@ -1874,7 +1960,7 @@ class Comparator(BinaryOperator):
 
     def get_first_second_operands(
         self, sources: Dict[int, HashedValue]
-    ) -> Tuple[SymbolicExpression, SymbolicExpression]:
+    ) -> Tuple[CanBehaveLikeAVariable, CanBehaveLikeAVariable]:
         if sources and any(
             v.value._var_._id_ in sources for v in self.right._unique_variables_
         ):

@@ -35,10 +35,11 @@ from krrood.experiments.lubm_with_predicates import (
 from krrood.ormatic.utils import classes_of_module
 
 
-def get_eql_queries() -> List[ResultQuantifier]:
+def get_eql_queries(clear_graph: bool = True) -> List[ResultQuantifier]:
     # 1 (No joining, just filtration of graduate students through taking a certain course)
-    SymbolGraph().clear()
-    SymbolGraph.build(classes=classes_of_module(lubm_with_predicates))
+    if clear_graph:
+        SymbolGraph().clear()
+        SymbolGraph.build(classes=classes_of_module(lubm_with_predicates))
     with symbolic_mode():
         q1 = a(
             x := GraduateStudent(),
@@ -207,7 +208,7 @@ if __name__ == "__main__":
     print(f"Python Count: {count}")
     print(f"Python Time elapsed: {python_end_time - python_start_time} seconds")
     start_time = time.time()
-    counts, results, times = evaluate_eql(get_eql_queries())
+    counts, results, times = evaluate_eql(get_eql_queries(clear_graph=False))
     end_time = time.time()
     for i, n in enumerate(counts, 1):
         print(f"{i}:{n} ({times[i - 1]} sec)")

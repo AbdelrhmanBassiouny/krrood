@@ -3,7 +3,7 @@ from __future__ import annotations
 import os
 from copy import copy
 from dataclasses import dataclass, field, fields
-from functools import cached_property
+from functools import cached_property, lru_cache
 
 from rustworkx import PyDiGraph
 from typing_extensions import (
@@ -213,16 +213,19 @@ class SymbolGraph:
             if issubclass(predicate_subclass, type(edge.predicate))
         )
 
+    @lru_cache(maxsize=None)
     def get_incoming_neighbors_with_predicate_type(
         self, wrapped_instance: WrappedInstance, predicate_type: Type[Predicate]
     ) -> Iterable[WrappedInstance]:
         wrapped_instance = self.get_wrapped_instance(wrapped_instance)
-        yield from (
-            self._instance_graph.get_node_data(parent_idx)
-            for parent_idx, _, edge in self._instance_graph.in_edges(
-                wrapped_instance.index
-            )
-            if isinstance(edge.predicate, predicate_type)
+        return tuple(
+            [
+                self._instance_graph.get_node_data(parent_idx)
+                for parent_idx, _, edge in self._instance_graph.in_edges(
+                    wrapped_instance.index
+                )
+                if isinstance(edge.predicate, predicate_type)
+            ]
         )
 
     def get_incoming_neighbors(
@@ -234,6 +237,13 @@ class SymbolGraph:
             for parent_idx, _, _ in self._instance_graph.in_edges(
                 wrapped_instance.index
             )
+        )
+
+    @lru_cache(maxsize=None)
+    def get_in_edges(self, wrapped_instance: WrappedInstance):
+        wrapped_instance = self.get_wrapped_instance(wrapped_instance)
+        return tuple(
+            [e for _, _, e in self._instance_graph.in_edges(wrapped_instance.index)]
         )
 
     def get_outgoing_neighbors_with_predicate_type(
@@ -315,6 +325,9 @@ class SymbolGraph:
                 os.remove(tmp_filepath)
             except Exception as e:
                 logger.error(e)
+
+    def __hash__(self):
+        return hash(id(self))
 
 
 symbols_registry: Set[Type] = set()
