@@ -5,6 +5,14 @@ from pathlib import Path
 from .models import EQLExample
 from .formatters import SchemaContextFormatter
 from krrood.class_diagrams.class_diagram import ClassDiagram
+from langchain.vectorstores import Pinecone
+import dotenv
+from langchain_huggingface import HuggingFaceEmbeddings
+import os
+from typing import Any, List, Tuple, Literal, Union
+from langchain.schema import Document
+from langchain_pinecone import PineconeVectorStore
+from sentence_transformers import CrossEncoder
 
 
 @dataclass
@@ -13,11 +21,134 @@ class SystemPromptBuilder:
     Builds comprehensive system prompts for LLM-based natural language to EQL conversion.
     Includes EQL syntax rules, API examples, and schema context.
     """
-    
+
+
     class_diagram: ClassDiagram
     examples: list[EQLExample] = field(default_factory=list)
+    base_dir: Path
+    examples_path: str
+    pc: Pinecone
     
-    def build_system_prompt(self) -> str:
+
+    def __post_init__(self, pinecone_index_name: str, pinecone_host_url: str, PINECONE_API_KEY: str, 
+                    pinecone_namespace="__default__", embeddings=HuggingFaceEmbeddings(), examples_path="src/krrood/nlp_to_eql/text_examples"):
+        """
+            Defining class attributes.
+        """ 
+        self.base_dir = Path(__file__).resolve().parent.parent.parent
+        self.examples_path = self.base_dir / examples_path
+        self.pc = Pinecone(api_key=os.getenv(PINECONE_API_KEY))
+        self.index = self.pc.Index(host=pinecone_host_url)
+        self.embeddings = embeddings
+        self.index_name = pinecone_index_name
+        self.pinecone_namespace = pinecone_namespace
+        self.docsearch = PineconeVectorStore(embedding=self.embeddings, index=self.index)
+    
+    def chunk_text(self, text: str, chunk_size=500, overlap=50) -> List[str]:
+        """
+            Chunks text for embedding
+        """
+        words = text.split()
+        chunks = []
+        start = 0
+
+        while start < len(words):
+            # Tentative end index
+            end = min(start + chunk_size, len(words))
+            chunk_words = words[start:end]
+
+            # Join into a string
+            chunk = " ".join(chunk_words)
+
+            # Find last period before the cutoff
+            last_period = chunk.rfind(".")
+            if last_period != -1 and end < len(words):
+                # Cut at last period
+                chunk = chunk[:last_period + 1]  # include the period
+                # Recalculate how many words were actually used
+                used_words = len(chunk.split())
+                end = start + used_words
+
+            chunks.append(chunk.strip())
+            start = max(end - overlap, end)  # maintain overlap without going backwards
+
+        return chunks
+
+    def create_embeddings(self, folder_path: str, chunk_size: int, overlap: int) -> List[List[float]]:
+        """
+        Generates embeddings for a list of text files in a folder.
+        """
+        for filename in os.listdir(folder_path):
+            if filename.endswith(".txt"):
+                filepath = os.path.join(folder_path, filename)
+
+                # Read file content
+                text=None
+                with open(filepath, "r", encoding="utf-8") as f:
+                    text = f.read()
+
+                # Chunk the file content
+                chunks = self.chunk_text(text, chunk_size=chunk_size, overlap=overlap)
+
+                # Embed each chunk and add to Pinecone
+                chunk_embeddings = self.embeddings.embed_documents(chunks)
+
+                print(_upsert_chunks(chunks = chunks, id = filename, category = filename, embedded_docs = chunk_embeddings))
+
+        return chunk_embeddings
+
+    def _upsert_chunks(self, chunks: List[str], id: str, category: str, embedded_docs: List[List[float]]) -> str:
+        """
+            Upserts text and embeddings to pinecone vectore database.
+        """
+        for i, chunk in enumerate(chunks):
+            self.index.upsert(
+                namespace = self.pinecone_namespace,
+                vectors=[
+                    {
+                        "id": id + str(i),
+                        "values": embedded_docs[i],
+                        "metadata": {"text": chunk, "category": category}, 
+                    },
+                ]
+            )
+        
+        return "Upsert succeeded"
+
+
+
+    def reranker(
+        self, 
+        context_texts: list[str], 
+        query: str, 
+        k: int, 
+        threshold: int
+    ) -> Tuple[List[str], List[dict[Literal['corpus_id', 'score', 'text'], Union[int, float, str]]]]:
+        """
+            This is a reranker that ranks the document retrived from the vector database
+            according to the relevance to the query
+
+            context_texts: is the list of text to rerank.
+            query: is the user query.
+            k: is the number of documents to return.
+            threshold: is the cut off score for th reranker so as to prevent it from returning documents 
+                        below a certain score.
+        """
+    
+        model = CrossEncoder("cross-encoder/ms-marco-MiniLM-L6-v2")
+        new_contxt = model.rank(query, context_texts, return_documents=True, top_k=k)
+
+        filtered = [d for d in new_contxt if d["score"] >= threshold]
+
+        texts = [d["text"] for d in filtered]
+
+        return texts, filtered
+
+
+
+    
+
+    def build_system_prompt(self, query: str = "") -> str:
         """
         Build complete system prompt with EQL syntax, examples, and schema.
         
@@ -27,7 +158,7 @@ class SystemPromptBuilder:
             self._build_header(),
             self._build_eql_syntax_section(),
             self._build_eql_api_section(),
-            self._build_examples_section(),
+            "\n\n".join(self._examples_retriver(query=query)),
             self._build_schema_section(),
             self._build_pyi_interface_section(),
             self._build_output_format_section(),
@@ -198,6 +329,36 @@ from krrood.entity_query_language.symbolic import symbolic_mode
 **`contains(collection, value)`**
 - Checks if collection contains value
 - Alternative to `in_(value, collection)`"""
+
+    def _examples_retriver(self, query: str) -> list[str]:
+        """
+            retrives relevant records in pinecone vectore database.
+        """
+        retriever = self.docsearch.as_retriever(
+                search_type="mmr",
+                search_kwargs={
+                    "k": 3,
+                    "fetch_k": 10,
+                    "lambda_mult": 0.7,  # Balance: 0=diversity, 1=relevance
+                })
+        
+        examples = retriever.get_relevant_documents(query)
+
+        seen = set()
+        unique_docs = []
+
+        for doc in examples:
+            meta = "The following code example talks about: \n" + doc.metadata['category']
+            content = meta + doc.page_content
+            if content not in seen:
+                seen.add(content)
+                unique_docs.append(doc)
+
+        context_texts: list[str] = [doc.page_content for doc in unique_docs]
+        
+        return context_texts
+
+
     
     def _build_examples_section(self) -> str:
         """Build examples section from stored examples."""
@@ -483,3 +644,4 @@ When generating EQL queries, follow these rules:
             eql_code=eql_code,
             category=category
         ))
+

@@ -14,6 +14,7 @@ from krrood.nlp_to_eql import (
     EQLQueryValidator,
     SystemPromptBuilder,
 )
+import dotenv
 
 
 # Test fixtures
@@ -58,7 +59,10 @@ def validator():
 @pytest.fixture
 def prompt_builder(simple_class_diagram):
     """Fixture providing a system prompt builder."""
-    return SystemPromptBuilder(simple_class_diagram)
+    dotenv.load_dotenv()
+    return SystemPromptBuilder(simple_class_diagram, pinecone_index_name = "rag", 
+                                pinecone_host_url = "https://rag-gfpqyn1.svc.aped-4627-b74a.pinecone.io", 
+                                PINECONE_API_KEY = os.getenv("PINECONE_API_KEY"))
 
 
 # Tests for EQLQueryValidator
@@ -213,7 +217,11 @@ class TestSystemPromptBuilder:
     
     def test_build_system_prompt(self, prompt_builder):
         """Test building complete system prompt."""
-        prompt = prompt_builder.build_system_prompt()
+
+        embeddings = prompt_builder.create_embeddings(folder_path = "/teamspace/studios/this_studio/krrood/src/krrood/nlp_to_eql/text_examples", 
+                                                        chunk_size = 100000, overlap=0)
+        
+        prompt = prompt_builder.build_system_prompt(query = "find all free bodies")
         
         assert "EQL Query Generation Assistant" in prompt
         assert "EQL Syntax Rules" in prompt
@@ -411,3 +419,4 @@ class TestIntegration:
         content = output_file.read_text()
         assert content == prompt
         assert "Integration test example" in content
+
