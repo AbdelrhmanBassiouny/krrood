@@ -2,17 +2,19 @@
 
 from dataclasses import dataclass, field
 from pathlib import Path
+
 from .models import EQLExample
 from .formatters import SchemaContextFormatter
 from krrood.class_diagrams.class_diagram import ClassDiagram
-from langchain.vectorstores import Pinecone
-import dotenv
+from pinecone import Pinecone
+from pinecone.db_data import _Index as PineconeIndex
 from langchain_huggingface import HuggingFaceEmbeddings
 import os
-from typing import Any, List, Tuple, Literal, Union
-from langchain.schema import Document
+from typing import Any, List, Tuple, Literal, Union, ClassVar
 from langchain_pinecone import PineconeVectorStore
 from sentence_transformers import CrossEncoder
+
+from .. import logger
 
 
 @dataclass
@@ -22,31 +24,32 @@ class SystemPromptBuilder:
     Includes EQL syntax rules, API examples, and schema context.
     """
 
-
     class_diagram: ClassDiagram
+    pinecone_host_url: str
+    pinecone_api_key: str
     examples: list[EQLExample] = field(default_factory=list)
-    base_dir: Path
-    examples_path: str
-    pc: Pinecone
-    
+    examples_path: Path = field(default="doc/eql")
+    embeddings: HuggingFaceEmbeddings = field(default_factory=HuggingFaceEmbeddings)
+    pinecone_namespace: str = field(default="__default__")
+    pc: Pinecone = field(init=False)
+    index: PineconeIndex = field(init=False)
+    docsearch: PineconeVectorStore = field(init=False)
+    base_dir: ClassVar[Path] = Path(__file__).resolve().parent.parent.parent.parent
 
-    def __post_init__(self, pinecone_index_name: str, pinecone_host_url: str, PINECONE_API_KEY: str, 
-                    pinecone_namespace="__default__", embeddings=HuggingFaceEmbeddings(), examples_path="src/krrood/nlp_to_eql/text_examples"):
+    def __post_init__(self):
         """
-            Defining class attributes.
-        """ 
-        self.base_dir = Path(__file__).resolve().parent.parent.parent
-        self.examples_path = self.base_dir / examples_path
-        self.pc = Pinecone(api_key=os.getenv(PINECONE_API_KEY))
-        self.index = self.pc.Index(host=pinecone_host_url)
-        self.embeddings = embeddings
-        self.index_name = pinecone_index_name
-        self.pinecone_namespace = pinecone_namespace
-        self.docsearch = PineconeVectorStore(embedding=self.embeddings, index=self.index)
-    
+        Defining class attributes.
+        """
+        self.examples_path = self.base_dir / self.examples_path
+        self.pc = Pinecone(api_key=os.getenv(self.pinecone_api_key))
+        self.index = self.pc.Index(host=self.pinecone_host_url)
+        self.docsearch = PineconeVectorStore(
+            embedding=self.embeddings, index=self.index
+        )
+
     def chunk_text(self, text: str, chunk_size=500, overlap=50) -> List[str]:
         """
-            Chunks text for embedding
+        Chunks text for embedding
         """
         words = text.split()
         chunks = []
@@ -64,7 +67,7 @@ class SystemPromptBuilder:
             last_period = chunk.rfind(".")
             if last_period != -1 and end < len(words):
                 # Cut at last period
-                chunk = chunk[:last_period + 1]  # include the period
+                chunk = chunk[: last_period + 1]  # include the period
                 # Recalculate how many words were actually used
                 used_words = len(chunk.split())
                 end = start + used_words
@@ -74,67 +77,80 @@ class SystemPromptBuilder:
 
         return chunks
 
-    def create_embeddings(self, folder_path: str, chunk_size: int, overlap: int) -> List[List[float]]:
+    def create_and_upsert_embeddings(
+        self, chunk_size: int, overlap: int
+    ) -> List[List[float]]:
         """
         Generates embeddings for a list of text files in a folder.
         """
-        for filename in os.listdir(folder_path):
-            if filename.endswith(".txt"):
-                filepath = os.path.join(folder_path, filename)
+        for filename in os.listdir(self.examples_path):
+            if not filename.endswith(".md"):
+                continue
+            filepath = os.path.join(self.examples_path, filename)
 
-                # Read file content
-                text=None
-                with open(filepath, "r", encoding="utf-8") as f:
-                    text = f.read()
+            # Read file content
+            text = None
+            with open(filepath, "r", encoding="utf-8") as f:
+                text = f.read()
 
-                # Chunk the file content
-                chunks = self.chunk_text(text, chunk_size=chunk_size, overlap=overlap)
+            # Chunk the file content
+            chunks = self.chunk_text(text, chunk_size=chunk_size, overlap=overlap)
 
-                # Embed each chunk and add to Pinecone
-                chunk_embeddings = self.embeddings.embed_documents(chunks)
+            # Embed each chunk and add to Pinecone
+            chunk_embeddings = self.embeddings.embed_documents(chunks)
 
-                print(_upsert_chunks(chunks = chunks, id = filename, category = filename, embedded_docs = chunk_embeddings))
+            logger.info(
+                self._upsert_chunks(
+                    chunks=chunks,
+                    id=filename,
+                    category=filename,
+                    embedded_docs=chunk_embeddings,
+                )
+            )
 
         return chunk_embeddings
 
-    def _upsert_chunks(self, chunks: List[str], id: str, category: str, embedded_docs: List[List[float]]) -> str:
+    def _upsert_chunks(
+        self,
+        chunks: List[str],
+        id: str,
+        category: str,
+        embedded_docs: List[List[float]],
+    ) -> str:
         """
-            Upserts text and embeddings to pinecone vectore database.
+        Upserts text and embeddings to pinecone vector database.
         """
         for i, chunk in enumerate(chunks):
             self.index.upsert(
-                namespace = self.pinecone_namespace,
+                namespace=self.pinecone_namespace,
                 vectors=[
                     {
                         "id": id + str(i),
                         "values": embedded_docs[i],
-                        "metadata": {"text": chunk, "category": category}, 
+                        "metadata": {"text": chunk, "category": category},
                     },
-                ]
+                ],
             )
-        
+
         return "Upsert succeeded"
 
-
-
     def reranker(
-        self, 
-        context_texts: list[str], 
-        query: str, 
-        k: int, 
-        threshold: int
-    ) -> Tuple[List[str], List[dict[Literal['corpus_id', 'score', 'text'], Union[int, float, str]]]]:
+        self, context_texts: list[str], query: str, k: int, threshold: int
+    ) -> Tuple[
+        List[str],
+        List[dict[Literal["corpus_id", "score", "text"], Union[int, float, str]]],
+    ]:
         """
-            This is a reranker that ranks the document retrived from the vector database
-            according to the relevance to the query
+        This is a reranker that ranks the document retrived from the vector database
+        according to the relevance to the query
 
-            context_texts: is the list of text to rerank.
-            query: is the user query.
-            k: is the number of documents to return.
-            threshold: is the cut off score for th reranker so as to prevent it from returning documents 
-                        below a certain score.
+        context_texts: is the list of text to rerank.
+        query: is the user query.
+        k: is the number of documents to return.
+        threshold: is the cut off score for th reranker so as to prevent it from returning documents
+                    below a certain score.
         """
-    
+
         model = CrossEncoder("cross-encoder/ms-marco-MiniLM-L6-v2")
         new_contxt = model.rank(query, context_texts, return_documents=True, top_k=k)
 
@@ -144,14 +160,10 @@ class SystemPromptBuilder:
 
         return texts, filtered
 
-
-
-    
-
     def build_system_prompt(self, query: str = "") -> str:
         """
         Build complete system prompt with EQL syntax, examples, and schema.
-        
+
         :return: Complete system prompt string
         """
         sections = [
@@ -163,22 +175,22 @@ class SystemPromptBuilder:
             self._build_pyi_interface_section(),
             self._build_output_format_section(),
         ]
-        
+
         return "\n\n".join(sections)
-    
+
     def dump_to_file(self, file_path: str | Path):
         """
         Dump the complete system prompt to a file.
-        
+
         :param file_path: Path where the system prompt will be saved
         """
         prompt = self.build_system_prompt()
         path = Path(file_path)
         path.parent.mkdir(parents=True, exist_ok=True)
-        
-        with open(path, 'w') as f:
+
+        with open(path, "w") as f:
             f.write(prompt)
-    
+
     def _build_header(self) -> str:
         """Build system prompt header."""
         return """# EQL Query Generation Assistant
@@ -188,7 +200,7 @@ EQL is a pythonic, relational query language that provides implicit joins throug
 
 Your role is to help users write correct EQL queries by understanding their natural language descriptions
 and generating syntactically correct, executable EQL code."""
-    
+
     def _build_eql_syntax_section(self) -> str:
         """Build EQL syntax rules section."""
         return """## EQL Syntax Rules
@@ -268,7 +280,7 @@ All EQL queries must be wrapped in `symbolic_mode()`:
 with symbolic_mode():
     query = an(entity(var := let(Type, domain=data), conditions))
 ```"""
-    
+
     def _build_eql_api_section(self) -> str:
         """Build EQL API reference section."""
         return """## EQL API Reference
@@ -332,58 +344,59 @@ from krrood.entity_query_language.symbolic import symbolic_mode
 
     def _examples_retriver(self, query: str) -> list[str]:
         """
-            retrives relevant records in pinecone vectore database.
+        retrives relevant records in pinecone vectore database.
         """
         retriever = self.docsearch.as_retriever(
-                search_type="mmr",
-                search_kwargs={
-                    "k": 3,
-                    "fetch_k": 10,
-                    "lambda_mult": 0.7,  # Balance: 0=diversity, 1=relevance
-                })
-        
+            search_type="mmr",
+            search_kwargs={
+                "k": 3,
+                "fetch_k": 10,
+                "lambda_mult": 0.7,  # Balance: 0=diversity, 1=relevance
+            },
+        )
+
         examples = retriever.get_relevant_documents(query)
 
         seen = set()
         unique_docs = []
 
         for doc in examples:
-            meta = "The following code example talks about: \n" + doc.metadata['category']
+            meta = (
+                "The following code example talks about: \n" + doc.metadata["category"]
+            )
             content = meta + doc.page_content
             if content not in seen:
                 seen.add(content)
                 unique_docs.append(doc)
 
         context_texts: list[str] = [doc.page_content for doc in unique_docs]
-        
+
         return context_texts
 
-
-    
     def _build_examples_section(self) -> str:
         """Build examples section from stored examples."""
         if not self.examples:
             return self._build_default_examples()
-        
+
         lines = ["## EQL Query Examples"]
-        
+
         # Group examples by category
         categories = {}
         for example in self.examples:
             if example.category not in categories:
                 categories[example.category] = []
             categories[example.category].append(example)
-        
+
         for category, examples in categories.items():
             lines.append(f"\n### {category.replace('_', ' ').title()}")
             for example in examples:
                 lines.append(f"\n**{example.description}**")
                 if example.natural_language:
-                    lines.append(f"Natural Language: \"{example.natural_language}\"")
+                    lines.append(f'Natural Language: "{example.natural_language}"')
                 lines.append(f"```python\n{example.eql_code}\n```")
-        
+
         return "\n".join(lines)
-    
+
     def _build_default_examples(self) -> str:
         """Build default examples section."""
         return """## EQL Query Examples
@@ -560,25 +573,25 @@ with symbolic_mode():
     query = the(entity(position, position.y == 5))
 result = query.evaluate()  # Raises error if multiple or no results
 ```"""
-    
+
     def _build_schema_section(self) -> str:
         """Build schema context section from ClassDiagram."""
         formatter = SchemaContextFormatter(self.class_diagram)
         schema_info = formatter.format_for_prompt()
         class_names = ", ".join(formatter.get_class_names())
-        
+
         return f"""## Available Entity Types and Schema
 
 The following entity types are available for queries:
 **Classes:** {class_names}
 
 {schema_info}"""
-    
+
     def _build_pyi_interface_section(self) -> str:
         """Build Python stub interface section from ClassDiagram."""
         formatter = SchemaContextFormatter(self.class_diagram)
         pyi_content = formatter.format_as_pyi()
-        
+
         return f"""## Python Type Interface (.pyi)
 
 The following shows the complete type interface for all available entity classes.
@@ -587,7 +600,7 @@ Use this to understand the exact types, fields, and relationships:
 ```python
 {pyi_content}
 ```"""
-    
+
     def _build_output_format_section(self) -> str:
         """Build output format guidelines."""
         return """## Output Format Requirements
@@ -628,20 +641,26 @@ When generating EQL queries, follow these rules:
    - Use `an()` when expecting multiple results
    - Use `the()` when expecting exactly one result"""
 
-    def add_example(self, description: str, natural_language: str, 
-                   eql_code: str, category: str = "general"):
+    def add_example(
+        self,
+        description: str,
+        natural_language: str,
+        eql_code: str,
+        category: str = "general",
+    ):
         """
         Add a custom EQL example to the system prompt.
-        
+
         :param description: Brief description of what the query does
         :param natural_language: Natural language version of the query
         :param eql_code: The actual EQL code
         :param category: Category for grouping (e.g., "filtering", "joins")
         """
-        self.examples.append(EQLExample(
-            description=description,
-            natural_language=natural_language,
-            eql_code=eql_code,
-            category=category
-        ))
-
+        self.examples.append(
+            EQLExample(
+                description=description,
+                natural_language=natural_language,
+                eql_code=eql_code,
+                category=category,
+            )
+        )

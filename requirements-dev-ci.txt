@@ -3,3 +3,7 @@ tqdm
 pdbpp
 pytest
 omegaconf
+
+# nlp_to_eql
+dotenv
+
