@@ -1,12 +1,12 @@
 from typing_extensions import Any, Callable, List, Optional, Tuple, Type, Union
-from test.datasets import Habitat, Species, load_zoo_cases
-from ripple_down_rules.datastructures.case import Case
-from ripple_down_rules.datastructures.dataclasses import CaseQuery
-from ripple_down_rules.datastructures.enums import Category
-from ripple_down_rules.experts import Human
-from ripple_down_rules.rdr import GeneralRDR, MultiClassRDR, SingleClassRDR
-from ripple_down_rules.utils import make_set
-from test.test_helpers.helpers import get_fit_grdr, get_fit_mcrdr, get_fit_scrdr, get_habitat
+from test.test_ripple_down_rules.datasets import Habitat, Species, load_zoo_cases
+from krrood.ripple_down_rules.datastructures.case import Case
+from krrood.ripple_down_rules.datastructures.dataclasses import CaseQuery
+from krrood.ripple_down_rules.datastructures.enums import Category
+from krrood.ripple_down_rules.experts import Human
+from krrood.ripple_down_rules.rdr import GeneralRDR, MultiClassRDR, SingleClassRDR
+from krrood.ripple_down_rules.utils import make_set
+from test.test_ripple_down_rules.test_helpers.helpers import get_fit_grdr, get_fit_mcrdr, get_fit_scrdr, get_habitat
 from pandas.core.frame import DataFrame
 
 def animal_habitats_of_type_habitat(case: DataFrame) -> List[Habitat]:
@@ -21,14 +21,14 @@ def animal_habitats_of_type_habitat(case: DataFrame) -> List[Habitat]:
 
 
 from typing_extensions import Any, Callable, List, Optional, Tuple, Type
-from test.datasets import Habitat, Species, load_zoo_cases
-from ripple_down_rules.datastructures.case import Case
-from ripple_down_rules.datastructures.dataclasses import CaseQuery
-from ripple_down_rules.datastructures.enums import Category
-from ripple_down_rules.experts import Human
-from ripple_down_rules.rdr import GeneralRDR, MultiClassRDR, SingleClassRDR
-from ripple_down_rules.utils import make_set
-from test.test_helpers.helpers import get_fit_grdr, get_fit_mcrdr, get_fit_scrdr, get_habitat
+from test.test_ripple_down_rules.datasets import Habitat, Species, load_zoo_cases
+from krrood.ripple_down_rules.datastructures.case import Case
+from krrood.ripple_down_rules.datastructures.dataclasses import CaseQuery
+from krrood.ripple_down_rules.datastructures.enums import Category
+from krrood.ripple_down_rules.experts import Human
+from krrood.ripple_down_rules.rdr import GeneralRDR, MultiClassRDR, SingleClassRDR
+from krrood.ripple_down_rules.utils import make_set
+from test.test_ripple_down_rules.test_helpers.helpers import get_fit_grdr, get_fit_mcrdr, get_fit_scrdr, get_habitat
 from pandas.core.frame import DataFrame
 
 def conditions_for_animal_habitats_of_type_habitat(case: DataFrame) -> bool:
@@ -43,14 +43,14 @@ def conditions_for_animal_habitats_of_type_habitat(case: DataFrame) -> bool:
 
 
 from typing_extensions import Any, Callable, List, Optional, Tuple, Type, Union
-from test.datasets import Habitat, Species, load_zoo_cases
-from ripple_down_rules.datastructures.case import Case
-from ripple_down_rules.datastructures.dataclasses import CaseQuery
-from ripple_down_rules.datastructures.enums import Category
-from ripple_down_rules.experts import Human
-from ripple_down_rules.rdr import GeneralRDR, MultiClassRDR, SingleClassRDR
-from ripple_down_rules.utils import make_set
-from test.test_helpers.helpers import get_fit_grdr, get_fit_mcrdr, get_fit_scrdr, get_habitat
+from test.test_ripple_down_rules.datasets import Habitat, Species, load_zoo_cases
+from krrood.ripple_down_rules.datastructures.case import Case
+from krrood.ripple_down_rules.datastructures.dataclasses import CaseQuery
+from krrood.ripple_down_rules.datastructures.enums import Category
+from krrood.ripple_down_rules.experts import Human
+from krrood.ripple_down_rules.rdr import GeneralRDR, MultiClassRDR, SingleClassRDR
+from krrood.ripple_down_rules.utils import make_set
+from test.test_ripple_down_rules.test_helpers.helpers import get_fit_grdr, get_fit_mcrdr, get_fit_scrdr, get_habitat
 from pandas.core.frame import DataFrame
 
 def animal_habitats_of_type_habitat(case: DataFrame) -> List[Habitat]:
@@ -65,14 +65,14 @@ def animal_habitats_of_type_habitat(case: DataFrame) -> List[Habitat]:
 
 
 from typing_extensions import Any, Callable, List, Optional, Tuple, Type
-from test.datasets import Habitat, Species, load_zoo_cases
-from ripple_down_rules.datastructures.case import Case
-from ripple_down_rules.datastructures.dataclasses import CaseQuery
-from ripple_down_rules.datastructures.enums import Category
-from ripple_down_rules.experts import Human
-from ripple_down_rules.rdr import GeneralRDR, MultiClassRDR, SingleClassRDR
-from ripple_down_rules.utils import make_set
-from test.test_helpers.helpers import get_fit_grdr, get_fit_mcrdr, get_fit_scrdr, get_habitat
+from test.test_ripple_down_rules.datasets import Habitat, Species, load_zoo_cases
+from krrood.ripple_down_rules.datastructures.case import Case
+from krrood.ripple_down_rules.datastructures.dataclasses import CaseQuery
+from krrood.ripple_down_rules.datastructures.enums import Category
+from krrood.ripple_down_rules.experts import Human
+from krrood.ripple_down_rules.rdr import GeneralRDR, MultiClassRDR, SingleClassRDR
+from krrood.ripple_down_rules.utils import make_set
+from test.test_ripple_down_rules.test_helpers.helpers import get_fit_grdr, get_fit_mcrdr, get_fit_scrdr, get_habitat
 from pandas.core.frame import DataFrame
 
 def conditions_for_animal_habitats_of_type_habitat(case: DataFrame) -> bool:
@@ -87,14 +87,14 @@ def conditions_for_animal_habitats_of_type_habitat(case: DataFrame) -> bool:
 
 
 from typing_extensions import Any, Callable, List, Optional, Tuple, Type, Union
-from test.datasets import Habitat, Species, load_zoo_cases
-from ripple_down_rules.datastructures.case import Case
-from ripple_down_rules.datastructures.dataclasses import CaseQuery
-from ripple_down_rules.datastructures.enums import Category
-from ripple_down_rules.experts import Human
-from ripple_down_rules.rdr import GeneralRDR, MultiClassRDR, SingleClassRDR
-from ripple_down_rules.utils import make_set
-from test.test_helpers.helpers import get_fit_grdr, get_fit_mcrdr, get_fit_scrdr, get_habitat
+from test.test_ripple_down_rules.datasets import Habitat, Species, load_zoo_cases
+from krrood.ripple_down_rules.datastructures.case import Case
+from krrood.ripple_down_rules.datastructures.dataclasses import CaseQuery
+from krrood.ripple_down_rules.datastructures.enums import Category
+from krrood.ripple_down_rules.experts import Human
+from krrood.ripple_down_rules.rdr import GeneralRDR, MultiClassRDR, SingleClassRDR
+from krrood.ripple_down_rules.utils import make_set
+from test.test_ripple_down_rules.test_helpers.helpers import get_fit_grdr, get_fit_mcrdr, get_fit_scrdr, get_habitat
 from pandas.core.frame import DataFrame
 
 def animal_habitats_of_type_habitat(case: DataFrame) -> List[Habitat]:
@@ -109,14 +109,14 @@ def animal_habitats_of_type_habitat(case: DataFrame) -> List[Habitat]:
 
 
 from typing_extensions import Any, Callable, List, Optional, Tuple, Type
-from test.datasets import Habitat, Species, load_zoo_cases
-from ripple_down_rules.datastructures.case import Case
-from ripple_down_rules.datastructures.dataclasses import CaseQuery
-from ripple_down_rules.datastructures.enums import Category
-from ripple_down_rules.experts import Human
-from ripple_down_rules.rdr import GeneralRDR, MultiClassRDR, SingleClassRDR
-from ripple_down_rules.utils import make_set
-from test.test_helpers.helpers import get_fit_grdr, get_fit_mcrdr, get_fit_scrdr, get_habitat
+from test.test_ripple_down_rules.datasets import Habitat, Species, load_zoo_cases
+from krrood.ripple_down_rules.datastructures.case import Case
+from krrood.ripple_down_rules.datastructures.dataclasses import CaseQuery
+from krrood.ripple_down_rules.datastructures.enums import Category
+from krrood.ripple_down_rules.experts import Human
+from krrood.ripple_down_rules.rdr import GeneralRDR, MultiClassRDR, SingleClassRDR
+from krrood.ripple_down_rules.utils import make_set
+from test.test_ripple_down_rules.test_helpers.helpers import get_fit_grdr, get_fit_mcrdr, get_fit_scrdr, get_habitat
 from pandas.core.frame import DataFrame
 
 def conditions_for_animal_habitats_of_type_habitat(case: DataFrame) -> bool:
@@ -132,14 +132,14 @@ def conditions_for_animal_habitats_of_type_habitat(case: DataFrame) -> bool:
 
 
 from typing_extensions import Any, Callable, List, Optional, Tuple, Type, Union
-from test.datasets import Habitat, Species, load_zoo_cases
-from ripple_down_rules.datastructures.case import Case
-from ripple_down_rules.datastructures.dataclasses import CaseQuery
-from ripple_down_rules.datastructures.enums import Category
-from ripple_down_rules.experts import Human
-from ripple_down_rules.rdr import GeneralRDR, MultiClassRDR, SingleClassRDR
-from ripple_down_rules.utils import make_set
-from test.test_helpers.helpers import get_fit_grdr, get_fit_mcrdr, get_fit_scrdr, get_habitat
+from test.test_ripple_down_rules.datasets import Habitat, Species, load_zoo_cases
+from krrood.ripple_down_rules.datastructures.case import Case
+from krrood.ripple_down_rules.datastructures.dataclasses import CaseQuery
+from krrood.ripple_down_rules.datastructures.enums import Category
+from krrood.ripple_down_rules.experts import Human
+from krrood.ripple_down_rules.rdr import GeneralRDR, MultiClassRDR, SingleClassRDR
+from krrood.ripple_down_rules.utils import make_set
+from test.test_ripple_down_rules.test_helpers.helpers import get_fit_grdr, get_fit_mcrdr, get_fit_scrdr, get_habitat
 from pandas.core.frame import DataFrame
 
 def animal_habitats_of_type_habitat(case: DataFrame) -> List[Habitat]:
@@ -154,14 +154,14 @@ def animal_habitats_of_type_habitat(case: DataFrame) -> List[Habitat]:
 
 
 from typing_extensions import Any, Callable, List, Optional, Tuple, Type
-from test.datasets import Habitat, Species, load_zoo_cases
-from ripple_down_rules.datastructures.case import Case
-from ripple_down_rules.datastructures.dataclasses import CaseQuery
-from ripple_down_rules.datastructures.enums import Category
-from ripple_down_rules.experts import Human
-from ripple_down_rules.rdr import GeneralRDR, MultiClassRDR, SingleClassRDR
-from ripple_down_rules.utils import make_set
-from test.test_helpers.helpers import get_fit_grdr, get_fit_mcrdr, get_fit_scrdr, get_habitat
+from test.test_ripple_down_rules.datasets import Habitat, Species, load_zoo_cases
+from krrood.ripple_down_rules.datastructures.case import Case
+from krrood.ripple_down_rules.datastructures.dataclasses import CaseQuery
+from krrood.ripple_down_rules.datastructures.enums import Category
+from krrood.ripple_down_rules.experts import Human
+from krrood.ripple_down_rules.rdr import GeneralRDR, MultiClassRDR, SingleClassRDR
+from krrood.ripple_down_rules.utils import make_set
+from test.test_ripple_down_rules.test_helpers.helpers import get_fit_grdr, get_fit_mcrdr, get_fit_scrdr, get_habitat
 from pandas.core.frame import DataFrame
 
 def conditions_for_animal_habitats_of_type_habitat(case: DataFrame) -> bool:
@@ -177,14 +177,14 @@ def conditions_for_animal_habitats_of_type_habitat(case: DataFrame) -> bool:
 
 
 from typing_extensions import Any, Callable, List, Optional, Tuple, Type, Union
-from test.datasets import Habitat, Species, load_zoo_cases
-from ripple_down_rules.datastructures.case import Case
-from ripple_down_rules.datastructures.dataclasses import CaseQuery
-from ripple_down_rules.datastructures.enums import Category
-from ripple_down_rules.experts import Human
-from ripple_down_rules.rdr import GeneralRDR, MultiClassRDR, SingleClassRDR
-from ripple_down_rules.utils import make_set
-from test.test_helpers.helpers import get_fit_grdr, get_fit_mcrdr, get_fit_scrdr, get_habitat
+from test.test_ripple_down_rules.datasets import Habitat, Species, load_zoo_cases
+from krrood.ripple_down_rules.datastructures.case import Case
+from krrood.ripple_down_rules.datastructures.dataclasses import CaseQuery
+from krrood.ripple_down_rules.datastructures.enums import Category
+from krrood.ripple_down_rules.experts import Human
+from krrood.ripple_down_rules.rdr import GeneralRDR, MultiClassRDR, SingleClassRDR
+from krrood.ripple_down_rules.utils import make_set
+from test.test_ripple_down_rules.test_helpers.helpers import get_fit_grdr, get_fit_mcrdr, get_fit_scrdr, get_habitat
 from pandas.core.frame import DataFrame
 
 def animal_habitats_of_type_habitat(case: DataFrame) -> List[Habitat]:
@@ -199,14 +199,14 @@ def animal_habitats_of_type_habitat(case: DataFrame) -> List[Habitat]:
 
 
 from typing_extensions import Any, Callable, List, Optional, Tuple, Type
-from test.datasets import Habitat, Species, load_zoo_cases
-from ripple_down_rules.datastructures.case import Case
-from ripple_down_rules.datastructures.dataclasses import CaseQuery
-from ripple_down_rules.datastructures.enums import Category
-from ripple_down_rules.experts import Human
-from ripple_down_rules.rdr import GeneralRDR, MultiClassRDR, SingleClassRDR
-from ripple_down_rules.utils import make_set
-from test.test_helpers.helpers import get_fit_grdr, get_fit_mcrdr, get_fit_scrdr, get_habitat
+from test.test_ripple_down_rules.datasets import Habitat, Species, load_zoo_cases
+from krrood.ripple_down_rules.datastructures.case import Case
+from krrood.ripple_down_rules.datastructures.dataclasses import CaseQuery
+from krrood.ripple_down_rules.datastructures.enums import Category
+from krrood.ripple_down_rules.experts import Human
+from krrood.ripple_down_rules.rdr import GeneralRDR, MultiClassRDR, SingleClassRDR
+from krrood.ripple_down_rules.utils import make_set
+from test.test_ripple_down_rules.test_helpers.helpers import get_fit_grdr, get_fit_mcrdr, get_fit_scrdr, get_habitat
 from pandas.core.frame import DataFrame
 
 def conditions_for_animal_habitats_of_type_habitat(case: DataFrame) -> bool:

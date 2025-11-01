@@ -5,7 +5,7 @@ from dataclasses import dataclass, field
 from omegaconf import MISSING
 from typing_extensions import List, TYPE_CHECKING
 
-from ripple_down_rules.datastructures.dataclasses import CaseConf
+from krrood.ripple_down_rules.datastructures.dataclasses import CaseConf
 
 if TYPE_CHECKING:
     pass
@@ -17,13 +17,11 @@ class BodyConf:
 
 
 @dataclass
-class HandleConf(BodyConf):
-    ...
+class HandleConf(BodyConf): ...
 
 
 @dataclass
-class ContainerConf(BodyConf):
-    ...
+class ContainerConf(BodyConf): ...
 
 
 @dataclass

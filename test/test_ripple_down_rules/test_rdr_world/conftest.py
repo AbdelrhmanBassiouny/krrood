@@ -4,21 +4,21 @@ from os.path import dirname
 import pytest
 from typing_extensions import Callable, Type
 
-from ripple_down_rules.utils import get_method_object_from_pytest_request
+from krrood.ripple_down_rules.utils import get_method_object_from_pytest_request
 
 try:
     from PyQt6.QtWidgets import QApplication
-    from ripple_down_rules.user_interface.gui import RDRCaseViewer
+    from krrood.ripple_down_rules.user_interface.gui import RDRCaseViewer
 except ImportError as e:
     QApplication = None
     RDRCaseViewer = None
 
 from ..conf.world.handles_and_containers import HandlesAndContainersWorld
 from ..datasets import *
-from ripple_down_rules.datastructures.dataclasses import CaseQuery
-from ripple_down_rules.experts import Human, Expert, AI
-from ripple_down_rules.helpers import is_matching
-from ripple_down_rules.rdr import GeneralRDR
+from krrood.ripple_down_rules.datastructures.dataclasses import CaseQuery
+from krrood.ripple_down_rules.experts import Human, Expert, AI
+from krrood.ripple_down_rules.helpers import is_matching
+from krrood.ripple_down_rules.rdr import GeneralRDR
 
 app: Optional[QApplication] = None
 viewer: Optional[RDRCaseViewer] = None
@@ -48,9 +48,18 @@ def get_possible_drawers() -> List[Drawer]:
 
 @pytest.fixture
 def drawer_case_queries() -> List[CaseQuery]:
-    case_queries = [CaseQuery(possible_drawer, "correct", (bool,), True, default_value=False,
-                              case_factory=get_possible_drawers, case_factory_idx=i)
-                    for i, possible_drawer in enumerate(get_possible_drawers())]
+    case_queries = [
+        CaseQuery(
+            possible_drawer,
+            "correct",
+            (bool,),
+            True,
+            default_value=False,
+            case_factory=get_possible_drawers,
+            case_factory_idx=i,
+        )
+        for i, possible_drawer in enumerate(get_possible_drawers())
+    ]
     return case_queries
 
 
@@ -70,7 +79,9 @@ def expert():
         :param conf: ExpertConfig object containing configuration for the expert.
         """
         human = conf.expert_type(use_loaded_answers=conf.use_loaded_answers)
-        filename = os.path.join(dirname(__file__), "../test_expert_answers", conf.filename)
+        filename = os.path.join(
+            dirname(__file__), "../test_expert_answers", conf.filename
+        )
         human.load_answers(filename)
         return human
 
@@ -85,12 +96,15 @@ def drawer_cabinet_human_expert(expert) -> Human:
     conf = ExpertConfig("drawer_cabinet_expert_answers_fit", use_loaded_answers=True)
     return expert(conf)
 
+
 @pytest.fixture
 def drawer_cabinet_ai_expert(expert) -> Human:
     """
     Fixture to create an expert for drawer and cabinet views.
     """
-    conf = ExpertConfig("drawer_cabinet_ai_expert_answers_fit", use_loaded_answers=False, expert_type=AI)
+    conf = ExpertConfig(
+        "drawer_cabinet_ai_expert_answers_fit", use_loaded_answers=False, expert_type=AI
+    )
     return expert(conf)
 
 
@@ -99,7 +113,9 @@ def drawer_expert(expert) -> Human:
     """
     Fixture to create an expert for drawer views.
     """
-    conf = ExpertConfig("correct_drawer_rdr_expert_answers_fit", use_loaded_answers=True)
+    conf = ExpertConfig(
+        "correct_drawer_rdr_expert_answers_fit", use_loaded_answers=True
+    )
     return expert(conf)
 
 
@@ -108,13 +124,21 @@ def drawer_case_query() -> CaseQuery:
     """
     Create a CaseQuery for the given view type in the provided world.
     """
-    return CaseQuery(handles_and_containers_world(), "views", (Drawer,), False,
-                     case_factory=handles_and_containers_world)
+    return CaseQuery(
+        handles_and_containers_world(),
+        "views",
+        (Drawer,),
+        False,
+        case_factory=handles_and_containers_world,
+    )
 
 
 def possibilities_rdr_verification(rdr: GeneralRDR, case_query: CaseQuery) -> None:
     conclusions = rdr.classify(case_query.original_case)[case_query.attribute_name]
-    assert len([v for v in conclusions if isinstance(v, case_query.core_attribute_type)]) > 0
+    assert (
+        len([v for v in conclusions if isinstance(v, case_query.core_attribute_type)])
+        > 0
+    )
 
 
 @pytest.fixture
@@ -131,23 +155,42 @@ def drawer_rdr(drawer_case_query, drawer_cabinet_human_expert) -> GeneralRDR:
 @pytest.fixture
 def drawer_cabinet_rdr(request, drawer_cabinet_human_expert) -> GeneralRDR:
     world = handles_and_containers_world()
-    rdr = get_drawer_cabinet_rdr(world, drawer_cabinet_human_expert, get_method_object_from_pytest_request(request))
+    rdr = get_drawer_cabinet_rdr(
+        world,
+        drawer_cabinet_human_expert,
+        get_method_object_from_pytest_request(request),
+    )
     return rdr
+
 
 @pytest.fixture
 def drawer_cabinet_ai_rdr(request, drawer_cabinet_ai_expert) -> GeneralRDR:
     world = handles_and_containers_world()
-    rdr = get_drawer_cabinet_rdr(world, drawer_cabinet_ai_expert, get_method_object_from_pytest_request(request))
+    rdr = get_drawer_cabinet_rdr(
+        world, drawer_cabinet_ai_expert, get_method_object_from_pytest_request(request)
+    )
     return rdr
 
-def get_drawer_cabinet_rdr(world: World, expert: Expert, scenario: Callable) -> GeneralRDR:
+
+def get_drawer_cabinet_rdr(
+    world: World, expert: Expert, scenario: Callable
+) -> GeneralRDR:
     """
     Fixture to create a GeneralRDR for drawer and cabinet views.
     """
     rdr = GeneralRDR()
     for view in [Drawer, Cabinet]:
-        rdr.fit_case(CaseQuery(world, "views", (view,), False, case_factory=handles_and_containers_world),
-                     expert=expert, scenario=scenario)
+        rdr.fit_case(
+            CaseQuery(
+                world,
+                "views",
+                (view,),
+                False,
+                case_factory=handles_and_containers_world,
+            ),
+            expert=expert,
+            scenario=scenario,
+        )
     found_views = rdr.classify(world)
     for view in [Drawer, Cabinet]:
         assert len([v for v in found_views["views"] if isinstance(v, view)]) > 0

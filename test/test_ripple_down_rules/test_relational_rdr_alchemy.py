@@ -4,15 +4,24 @@ import os
 from unittest import TestCase
 
 from sqlalchemy import ForeignKey
-from sqlalchemy.orm import MappedAsDataclass, DeclarativeBase, declared_attr, Mapped, mapped_column, relationship
+from sqlalchemy.orm import (
+    MappedAsDataclass,
+    DeclarativeBase,
+    declared_attr,
+    Mapped,
+    mapped_column,
+    relationship,
+)
 from typing_extensions import List, Any, Set
 
-from ripple_down_rules.datastructures.case import CaseAttribute
-from ripple_down_rules.datastructures.dataclasses import CaseQuery
-from ripple_down_rules.datastructures.callable_expression import CallableExpression
-from ripple_down_rules.experts import Human
-from ripple_down_rules.rdr import SingleClassRDR
-from ripple_down_rules.utils import render_tree
+from krrood.ripple_down_rules.datastructures.case import CaseAttribute
+from krrood.ripple_down_rules.datastructures.dataclasses import CaseQuery
+from krrood.ripple_down_rules.datastructures.callable_expression import (
+    CallableExpression,
+)
+from krrood.ripple_down_rules.experts import Human
+from krrood.ripple_down_rules.rdr import SingleClassRDR
+from krrood.ripple_down_rules.utils import render_tree
 
 
 class Base(MappedAsDataclass, DeclarativeBase):
@@ -32,20 +41,36 @@ class PolymorphicIdentityMixin:
 
 
 class HasPart(Base):
-    left_id: Mapped[int] = mapped_column(ForeignKey("PhysicalObject.id"), primary_key=True, init=False, repr=False)
-    right_id: Mapped[int] = mapped_column(ForeignKey("PhysicalObject.id"), primary_key=True, init=False, repr=False)
-    left: Mapped[PhysicalObject] = relationship(back_populates="has_part_relations", foreign_keys=[left_id])
-    right: Mapped[PhysicalObject] = relationship(back_populates="part_of_relations", foreign_keys=[right_id])
+    left_id: Mapped[int] = mapped_column(
+        ForeignKey("PhysicalObject.id"), primary_key=True, init=False, repr=False
+    )
+    right_id: Mapped[int] = mapped_column(
+        ForeignKey("PhysicalObject.id"), primary_key=True, init=False, repr=False
+    )
+    left: Mapped[PhysicalObject] = relationship(
+        back_populates="has_part_relations", foreign_keys=[left_id]
+    )
+    right: Mapped[PhysicalObject] = relationship(
+        back_populates="part_of_relations", foreign_keys=[right_id]
+    )
 
     def __hash__(self):
         return hash(id(self))
 
 
 class ContainsObject(Base):
-    left_id: Mapped[int] = mapped_column(ForeignKey("PhysicalObject.id"), primary_key=True, init=False, repr=False)
-    right_id: Mapped[int] = mapped_column(ForeignKey("PhysicalObject.id"), primary_key=True, init=False, repr=False)
-    left: Mapped[PhysicalObject] = relationship(back_populates="contains_objects_relations", foreign_keys=[left_id])
-    right: Mapped[PhysicalObject] = relationship(back_populates="is_contained_in_relations", foreign_keys=[right_id])
+    left_id: Mapped[int] = mapped_column(
+        ForeignKey("PhysicalObject.id"), primary_key=True, init=False, repr=False
+    )
+    right_id: Mapped[int] = mapped_column(
+        ForeignKey("PhysicalObject.id"), primary_key=True, init=False, repr=False
+    )
+    left: Mapped[PhysicalObject] = relationship(
+        back_populates="contains_objects_relations", foreign_keys=[left_id]
+    )
+    right: Mapped[PhysicalObject] = relationship(
+        back_populates="is_contained_in_relations", foreign_keys=[right_id]
+    )
 
     def __hash__(self):
         return hash(id(self))
@@ -54,18 +79,34 @@ class ContainsObject(Base):
 class PhysicalObject(Base):
     id: Mapped[int] = mapped_column(primary_key=True, init=False, autoincrement=True)
     name: Mapped[str]
-    has_part_relations: Mapped[List[HasPart]] = relationship(init=False, back_populates="left",
-                                                             foreign_keys=[HasPart.left_id],
-                                                             repr=False, default_factory=list)
-    part_of_relations: Mapped[List[HasPart]] = relationship(init=False, back_populates="right",
-                                                            foreign_keys=[HasPart.right_id],
-                                                            repr=False, default_factory=list)
-    contains_objects_relations: Mapped[List[ContainsObject]] = relationship(init=False, back_populates="left",
-                                                                           foreign_keys=[ContainsObject.left_id],
-                                                                           repr=False, default_factory=list)
-    is_contained_in_relations: Mapped[List[ContainsObject]] = relationship(init=False, back_populates="right",
-                                                                          foreign_keys=[ContainsObject.right_id],
-                                                                          repr=False, default_factory=list)
+    has_part_relations: Mapped[List[HasPart]] = relationship(
+        init=False,
+        back_populates="left",
+        foreign_keys=[HasPart.left_id],
+        repr=False,
+        default_factory=list,
+    )
+    part_of_relations: Mapped[List[HasPart]] = relationship(
+        init=False,
+        back_populates="right",
+        foreign_keys=[HasPart.right_id],
+        repr=False,
+        default_factory=list,
+    )
+    contains_objects_relations: Mapped[List[ContainsObject]] = relationship(
+        init=False,
+        back_populates="left",
+        foreign_keys=[ContainsObject.left_id],
+        repr=False,
+        default_factory=list,
+    )
+    is_contained_in_relations: Mapped[List[ContainsObject]] = relationship(
+        init=False,
+        back_populates="right",
+        foreign_keys=[ContainsObject.right_id],
+        repr=False,
+        default_factory=list,
+    )
     type: Mapped[str] = mapped_column(init=False)
 
     @property
@@ -135,7 +176,9 @@ class RelationalRDRTestCase(TestCase):
         cls.target = [cls.part_b, cls.part_c, cls.part_d, cls.part_e]
 
     def test_setup(self):
-        self.assertEqual(self.robot.parts, [self.part_a, self.part_b, self.part_c, self.part_d])
+        self.assertEqual(
+            self.robot.parts, [self.part_a, self.part_b, self.part_c, self.part_d]
+        )
         for part in self.robot.parts:
             self.assertEqual(len(part.part_of), 1)
             self.assertEqual(part.part_of[0], self.robot)
@@ -154,7 +197,10 @@ class RelationalRDRTestCase(TestCase):
             expert.load_answers(filename)
 
         scrdr = SingleClassRDR()
-        cat = scrdr.fit_case(CaseQuery(self.robot, "contained_objects", (PhysicalObject,), False), expert=expert)
+        cat = scrdr.fit_case(
+            CaseQuery(self.robot, "contained_objects", (PhysicalObject,), False),
+            expert=expert,
+        )
         # render_tree(scrdr.start_rule, use_dot_exporter=True,
         #             filename=self.test_results_dir + "/relational_scrdr_classify")
         self.assertEqual(cat, self.target)
@@ -167,10 +213,19 @@ class RelationalRDRTestCase(TestCase):
     def test_parse_relational_conditions(self):
         user_input = "case.parts is not None and len(case.parts) > 0"
         conditions = CallableExpression(user_input, bool)
-        self.assertEqual(conditions(self.robot), (self.robot.parts is not None and len(self.robot.parts) > 0))
+        self.assertEqual(
+            conditions(self.robot),
+            (self.robot.parts is not None and len(self.robot.parts) > 0),
+        )
 
     def test_parse_relational_conclusions(self):
         user_input = "case.parts.contained_objects"
-        conclusion = CallableExpression(user_input, (CaseAttribute, PhysicalObject,),
-         mutually_exclusive=False)
+        conclusion = CallableExpression(
+            user_input,
+            (
+                CaseAttribute,
+                PhysicalObject,
+            ),
+            mutually_exclusive=False,
+        )
         self.assertEqual(conclusion(self.robot), self.target)

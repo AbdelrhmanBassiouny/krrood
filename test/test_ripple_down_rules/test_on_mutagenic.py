@@ -5,9 +5,9 @@ from unittest import skip
 
 from typing_extensions import List, Callable, Optional
 
-from ripple_down_rules.datastructures.dataclasses import CaseQuery
-from ripple_down_rules.experts import Human
-from ripple_down_rules.rdr import SingleClassRDR, GeneralRDR
+from krrood.ripple_down_rules.datastructures.dataclasses import CaseQuery
+from krrood.ripple_down_rules.experts import Human
+from krrood.ripple_down_rules.rdr import SingleClassRDR, GeneralRDR
 
 
 class Element(str, Enum):
@@ -59,114 +59,174 @@ class Molecule:
 
 
 def make_molecule_1() -> Molecule:
-    atoms = [Atom(element=Element.C, type=22, charge=-0.117),
-             Atom(element=Element.H, type=3, charge=0.142),
-             Atom(element=Element.C, type=27, charge=-0.087),
-             Atom(element=Element.C, type=27, charge=0.013), Atom(element=Element.C, type=22, charge=-0.117),
-             Atom(element=Element.C, type=22, charge=-0.117), Atom(element=Element.H, type=3, charge=0.143),
-             Atom(element=Element.H, type=3, charge=0.143), Atom(element=Element.C, type=22, charge=-0.117),
-             Atom(element=Element.C, type=22, charge=-0.117), Atom(element=Element.C, type=22, charge=-0.117),
-             Atom(element=Element.C, type=22, charge=-0.117), Atom(element=Element.C, type=22, charge=-0.117),
-             Atom(element=Element.H, type=3, charge=0.142), Atom(element=Element.H, type=3, charge=0.143),
-             Atom(element=Element.H, type=3, charge=0.142), Atom(element=Element.N, type=38, charge=0.812),
-             Atom(element=Element.O, type=40, charge=-0.388), Atom(element=Element.O, type=40, charge=-0.388),
-             Atom(element=Element.C, type=22, charge=-0.117), Atom(element=Element.C, type=195, charge=-0.087),
-             Atom(element=Element.C, type=195, charge=0.013), Atom(element=Element.C, type=22, charge=-0.117),
-             Atom(element=Element.H, type=3, charge=0.142), Atom(element=Element.H, type=3, charge=0.143),
-             Atom(element=Element.H, type=3, charge=0.142)]
-    bonds = [Bond(atom1=atoms[0], atom2=atoms[0], type=7),
-             Bond(atom1=atoms[0], atom2=atoms[6], type=1),
-             Bond(atom1=atoms[16], atom2=atoms[17], type=2),
-             Bond(atom1=atoms[0], atom2=atoms[6], type=1),
-             Bond(atom1=atoms[21], atom2=atoms[0], type=7),
-             Bond(atom1=atoms[0], atom2=atoms[1], type=1),
-             Bond(atom1=atoms[0], atom2=atoms[0], type=7),
-             Bond(atom1=atoms[0], atom2=atoms[20], type=7),
-             Bond(atom1=atoms[0], atom2=atoms[1], type=1),
-             Bond(atom1=atoms[3], atom2=atoms[0], type=7),
-             Bond(atom1=atoms[0], atom2=atoms[0], type=7),
-             Bond(atom1=atoms[0], atom2=atoms[0], type=7),
-             Bond(atom1=atoms[0], atom2=atoms[6], type=1),
-             Bond(atom1=atoms[16], atom2=atoms[0], type=1),
-             Bond(atom1=atoms[16], atom2=atoms[17], type=2),
-             Bond(atom1=atoms[0], atom2=atoms[1], type=1),
-             Bond(atom1=atoms[20], atom2=atoms[21], type=7),
-             Bond(atom1=atoms[20], atom2=atoms[2], type=7),
-             Bond(atom1=atoms[0], atom2=atoms[0], type=7),
-             Bond(atom1=atoms[0], atom2=atoms[1], type=1),
-             Bond(atom1=atoms[0], atom2=atoms[21], type=7),
-             Bond(atom1=atoms[0], atom2=atoms[0], type=7),
-             Bond(atom1=atoms[0], atom2=atoms[1], type=1),
-             Bond(atom1=atoms[2], atom2=atoms[0], type=7),
-             Bond(atom1=atoms[0], atom2=atoms[3], type=7),
-             Bond(atom1=atoms[0], atom2=atoms[0], type=7),
-             Bond(atom1=atoms[0], atom2=atoms[6], type=1),
-             Bond(atom1=atoms[2], atom2=atoms[3], type=7)]
+    atoms = [
+        Atom(element=Element.C, type=22, charge=-0.117),
+        Atom(element=Element.H, type=3, charge=0.142),
+        Atom(element=Element.C, type=27, charge=-0.087),
+        Atom(element=Element.C, type=27, charge=0.013),
+        Atom(element=Element.C, type=22, charge=-0.117),
+        Atom(element=Element.C, type=22, charge=-0.117),
+        Atom(element=Element.H, type=3, charge=0.143),
+        Atom(element=Element.H, type=3, charge=0.143),
+        Atom(element=Element.C, type=22, charge=-0.117),
+        Atom(element=Element.C, type=22, charge=-0.117),
+        Atom(element=Element.C, type=22, charge=-0.117),
+        Atom(element=Element.C, type=22, charge=-0.117),
+        Atom(element=Element.C, type=22, charge=-0.117),
+        Atom(element=Element.H, type=3, charge=0.142),
+        Atom(element=Element.H, type=3, charge=0.143),
+        Atom(element=Element.H, type=3, charge=0.142),
+        Atom(element=Element.N, type=38, charge=0.812),
+        Atom(element=Element.O, type=40, charge=-0.388),
+        Atom(element=Element.O, type=40, charge=-0.388),
+        Atom(element=Element.C, type=22, charge=-0.117),
+        Atom(element=Element.C, type=195, charge=-0.087),
+        Atom(element=Element.C, type=195, charge=0.013),
+        Atom(element=Element.C, type=22, charge=-0.117),
+        Atom(element=Element.H, type=3, charge=0.142),
+        Atom(element=Element.H, type=3, charge=0.143),
+        Atom(element=Element.H, type=3, charge=0.142),
+    ]
+    bonds = [
+        Bond(atom1=atoms[0], atom2=atoms[0], type=7),
+        Bond(atom1=atoms[0], atom2=atoms[6], type=1),
+        Bond(atom1=atoms[16], atom2=atoms[17], type=2),
+        Bond(atom1=atoms[0], atom2=atoms[6], type=1),
+        Bond(atom1=atoms[21], atom2=atoms[0], type=7),
+        Bond(atom1=atoms[0], atom2=atoms[1], type=1),
+        Bond(atom1=atoms[0], atom2=atoms[0], type=7),
+        Bond(atom1=atoms[0], atom2=atoms[20], type=7),
+        Bond(atom1=atoms[0], atom2=atoms[1], type=1),
+        Bond(atom1=atoms[3], atom2=atoms[0], type=7),
+        Bond(atom1=atoms[0], atom2=atoms[0], type=7),
+        Bond(atom1=atoms[0], atom2=atoms[0], type=7),
+        Bond(atom1=atoms[0], atom2=atoms[6], type=1),
+        Bond(atom1=atoms[16], atom2=atoms[0], type=1),
+        Bond(atom1=atoms[16], atom2=atoms[17], type=2),
+        Bond(atom1=atoms[0], atom2=atoms[1], type=1),
+        Bond(atom1=atoms[20], atom2=atoms[21], type=7),
+        Bond(atom1=atoms[20], atom2=atoms[2], type=7),
+        Bond(atom1=atoms[0], atom2=atoms[0], type=7),
+        Bond(atom1=atoms[0], atom2=atoms[1], type=1),
+        Bond(atom1=atoms[0], atom2=atoms[21], type=7),
+        Bond(atom1=atoms[0], atom2=atoms[0], type=7),
+        Bond(atom1=atoms[0], atom2=atoms[1], type=1),
+        Bond(atom1=atoms[2], atom2=atoms[0], type=7),
+        Bond(atom1=atoms[0], atom2=atoms[3], type=7),
+        Bond(atom1=atoms[0], atom2=atoms[0], type=7),
+        Bond(atom1=atoms[0], atom2=atoms[6], type=1),
+        Bond(atom1=atoms[2], atom2=atoms[3], type=7),
+    ]
 
-    molecule = Molecule(ind1=1, inda=0, logp=4.23, lumo=-1.246, mutagenic=True, atoms=atoms, bonds=bonds)
+    molecule = Molecule(
+        ind1=1, inda=0, logp=4.23, lumo=-1.246, mutagenic=True, atoms=atoms, bonds=bonds
+    )
     return molecule
 
 
 def make_molecule_2() -> Molecule:
-    atoms = [Atom(element=Element.C, type=22, charge=-0.128), Atom(element=Element.H, type=3, charge=0.132),
-             Atom(element=Element.C, type=29, charge=0.002), Atom(element=Element.C, type=22, charge=-0.128),
-             Atom(element=Element.C, type=22, charge=-0.128), Atom(element=Element.C, type=22, charge=-0.128),
-             Atom(element=Element.C, type=22, charge=0.202), Atom(element=Element.C, type=22, charge=-0.128),
-             Atom(element=Element.H, type=3, charge=0.132), Atom(element=Element.H, type=3, charge=0.132),
-             Atom(element=Element.H, type=3, charge=0.132), Atom(element=Element.C, type=22, charge=-0.128),
-             Atom(element=Element.H, type=3, charge=0.132), Atom(element=Element.N, type=32, charge=-0.779),
-             Atom(element=Element.N, type=38, charge=0.801), Atom(element=Element.O, type=40, charge=-0.398),
-             Atom(element=Element.O, type=40, charge=-0.398), Atom(element=Element.H, type=1, charge=0.332),
-             Atom(element=Element.H, type=1, charge=0.332), Atom(element=Element.C, type=22, charge=-0.128),
-             Atom(element=Element.C, type=29, charge=0.002), Atom(element=Element.C, type=22, charge=-0.128),
-             Atom(element=Element.C, type=22, charge=-0.128), Atom(element=Element.H, type=3, charge=0.132),
-             Atom(element=Element.H, type=3, charge=0.132), Atom(element=Element.H, type=3, charge=0.132)]
+    atoms = [
+        Atom(element=Element.C, type=22, charge=-0.128),
+        Atom(element=Element.H, type=3, charge=0.132),
+        Atom(element=Element.C, type=29, charge=0.002),
+        Atom(element=Element.C, type=22, charge=-0.128),
+        Atom(element=Element.C, type=22, charge=-0.128),
+        Atom(element=Element.C, type=22, charge=-0.128),
+        Atom(element=Element.C, type=22, charge=0.202),
+        Atom(element=Element.C, type=22, charge=-0.128),
+        Atom(element=Element.H, type=3, charge=0.132),
+        Atom(element=Element.H, type=3, charge=0.132),
+        Atom(element=Element.H, type=3, charge=0.132),
+        Atom(element=Element.C, type=22, charge=-0.128),
+        Atom(element=Element.H, type=3, charge=0.132),
+        Atom(element=Element.N, type=32, charge=-0.779),
+        Atom(element=Element.N, type=38, charge=0.801),
+        Atom(element=Element.O, type=40, charge=-0.398),
+        Atom(element=Element.O, type=40, charge=-0.398),
+        Atom(element=Element.H, type=1, charge=0.332),
+        Atom(element=Element.H, type=1, charge=0.332),
+        Atom(element=Element.C, type=22, charge=-0.128),
+        Atom(element=Element.C, type=29, charge=0.002),
+        Atom(element=Element.C, type=22, charge=-0.128),
+        Atom(element=Element.C, type=22, charge=-0.128),
+        Atom(element=Element.H, type=3, charge=0.132),
+        Atom(element=Element.H, type=3, charge=0.132),
+        Atom(element=Element.H, type=3, charge=0.132),
+    ]
 
-    bonds = [Bond(atom1=atoms[0], atom2=atoms[1], type=1),
-             Bond(atom1=atoms[0], atom2=atoms[0], type=7),
-             Bond(atom1=atoms[0], atom2=atoms[1], type=1),
-             Bond(atom1=atoms[14], atom2=atoms[15], type=2),
-             Bond(atom1=atoms[6], atom2=atoms[13], type=1),
-             Bond(atom1=atoms[0], atom2=atoms[1], type=1),
-             Bond(atom1=atoms[6], atom2=atoms[0], type=7),
-             Bond(atom1=atoms[0], atom2=atoms[0], type=7),
-             Bond(atom1=atoms[0], atom2=atoms[0], type=7),
-             Bond(atom1=atoms[2], atom2=atoms[2], type=1),
-             Bond(atom1=atoms[0], atom2=atoms[1], type=1),
-             Bond(atom1=atoms[0], atom2=atoms[2], type=7),
-             Bond(atom1=atoms[13], atom2=atoms[17], type=1),
-             Bond(atom1=atoms[0], atom2=atoms[0], type=7),
-             Bond(atom1=atoms[0], atom2=atoms[0], type=7),
-             Bond(atom1=atoms[0], atom2=atoms[1], type=1),
-             Bond(atom1=atoms[0], atom2=atoms[0], type=7),
-             Bond(atom1=atoms[0], atom2=atoms[14], type=1),
-             Bond(atom1=atoms[0], atom2=atoms[2], type=7),
-             Bond(atom1=atoms[0], atom2=atoms[1], type=1),
-             Bond(atom1=atoms[2], atom2=atoms[0], type=7),
-             Bond(atom1=atoms[13], atom2=atoms[17], type=1),
-             Bond(atom1=atoms[14], atom2=atoms[15], type=2),
-             Bond(atom1=atoms[0], atom2=atoms[1], type=1),
-             Bond(atom1=atoms[0], atom2=atoms[1], type=1),
-             Bond(atom1=atoms[0], atom2=atoms[6], type=7),
-             Bond(atom1=atoms[2], atom2=atoms[0], type=7)]
+    bonds = [
+        Bond(atom1=atoms[0], atom2=atoms[1], type=1),
+        Bond(atom1=atoms[0], atom2=atoms[0], type=7),
+        Bond(atom1=atoms[0], atom2=atoms[1], type=1),
+        Bond(atom1=atoms[14], atom2=atoms[15], type=2),
+        Bond(atom1=atoms[6], atom2=atoms[13], type=1),
+        Bond(atom1=atoms[0], atom2=atoms[1], type=1),
+        Bond(atom1=atoms[6], atom2=atoms[0], type=7),
+        Bond(atom1=atoms[0], atom2=atoms[0], type=7),
+        Bond(atom1=atoms[0], atom2=atoms[0], type=7),
+        Bond(atom1=atoms[2], atom2=atoms[2], type=1),
+        Bond(atom1=atoms[0], atom2=atoms[1], type=1),
+        Bond(atom1=atoms[0], atom2=atoms[2], type=7),
+        Bond(atom1=atoms[13], atom2=atoms[17], type=1),
+        Bond(atom1=atoms[0], atom2=atoms[0], type=7),
+        Bond(atom1=atoms[0], atom2=atoms[0], type=7),
+        Bond(atom1=atoms[0], atom2=atoms[1], type=1),
+        Bond(atom1=atoms[0], atom2=atoms[0], type=7),
+        Bond(atom1=atoms[0], atom2=atoms[14], type=1),
+        Bond(atom1=atoms[0], atom2=atoms[2], type=7),
+        Bond(atom1=atoms[0], atom2=atoms[1], type=1),
+        Bond(atom1=atoms[2], atom2=atoms[0], type=7),
+        Bond(atom1=atoms[13], atom2=atoms[17], type=1),
+        Bond(atom1=atoms[14], atom2=atoms[15], type=2),
+        Bond(atom1=atoms[0], atom2=atoms[1], type=1),
+        Bond(atom1=atoms[0], atom2=atoms[1], type=1),
+        Bond(atom1=atoms[0], atom2=atoms[6], type=7),
+        Bond(atom1=atoms[2], atom2=atoms[0], type=7),
+    ]
 
-    molecule = Molecule(ind1=0, inda=0, logp=2.68, lumo=-1.034, mutagenic=False, atoms=atoms, bonds=bonds)
+    molecule = Molecule(
+        ind1=0,
+        inda=0,
+        logp=2.68,
+        lumo=-1.034,
+        mutagenic=False,
+        atoms=atoms,
+        bonds=bonds,
+    )
     return molecule
 
 
-def get_two_molecules_model(draw_tree=False, load_answers=True, save_answers=False,
-                            filename="./test_expert_answers/mutagenic_expert_answers",
-                            scenario: Optional[Callable] = None) -> SingleClassRDR:
+def get_two_molecules_model(
+    draw_tree=False,
+    load_answers=True,
+    save_answers=False,
+    filename="./test_expert_answers/mutagenic_expert_answers",
+    scenario: Optional[Callable] = None,
+) -> SingleClassRDR:
     expert = Human(use_loaded_answers=load_answers)
     if load_answers:
         expert.load_answers(filename)
 
     molecule_1 = make_molecule_1()
     molecule_2 = make_molecule_2()
-    case_queries = [CaseQuery(molecule_1, "mutagenic", bool, True, _target=molecule_1.mutagenic,
-                              case_factory=make_molecule_1),
-                    CaseQuery(molecule_2, "mutagenic", bool, True, _target=molecule_2.mutagenic,
-                              case_factory=make_molecule_2), ]
+    case_queries = [
+        CaseQuery(
+            molecule_1,
+            "mutagenic",
+            bool,
+            True,
+            _target=molecule_1.mutagenic,
+            case_factory=make_molecule_1,
+        ),
+        CaseQuery(
+            molecule_2,
+            "mutagenic",
+            bool,
+            True,
+            _target=molecule_2.mutagenic,
+            case_factory=make_molecule_2,
+        ),
+    ]
 
     rdr = SingleClassRDR()
     rdr.fit(case_queries, expert=expert, animate_tree=draw_tree, scenario=scenario)
@@ -187,8 +247,12 @@ def get_two_molecules_model(draw_tree=False, load_answers=True, save_answers=Fal
 
 
 def test_two_molecules():
-    rdr = get_two_molecules_model(draw_tree=False, load_answers=True, save_answers=False,
-                                  scenario=test_two_molecules)
+    rdr = get_two_molecules_model(
+        draw_tree=False,
+        load_answers=True,
+        save_answers=False,
+        scenario=test_two_molecules,
+    )
 
 
 def test_serialize_two_molecules_model():
@@ -209,6 +273,6 @@ def test_write_two_molecules_model_to_python():
     assert rdr.classify(make_molecule_2()) == loaded_rdr(make_molecule_2())
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     # test_two_molecules()
     test_write_two_molecules_model_to_python()

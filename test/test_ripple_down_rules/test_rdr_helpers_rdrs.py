@@ -2,22 +2,23 @@ from os.path import dirname, join
 
 from typing_extensions import Union, Any, Dict
 
-from ripple_down_rules.datastructures.dataclasses import CaseQuery
-from ripple_down_rules.rdr_decorators import RDRDecorator
-from ripple_down_rules.utils import is_iterable, make_list
+from krrood.ripple_down_rules.datastructures.dataclasses import CaseQuery
+from krrood.ripple_down_rules.rdr_decorators import RDRDecorator
+from krrood.ripple_down_rules.utils import is_iterable, make_list
 
 # app = QApplication(sys.argv)
-save_dir = join(dirname(__file__), '..', 'src', 'ripple_down_rules')
+save_dir = join(dirname(__file__), "..", "src", "ripple_down_rules")
 # viewer = RDRCaseViewer(save_dir=save_dir)
 viewer = None
-rdr_decorator: RDRDecorator = RDRDecorator(save_dir, (bool,), True,
-                                           fit=False)
+rdr_decorator: RDRDecorator = RDRDecorator(save_dir, (bool,), True, fit=False)
 
 
 @rdr_decorator.decorator
-def should_i_ask_the_expert_for_a_target(conclusions: Union[Any, Dict[str, Any]],
-                                         case_query: CaseQuery,
-                                         update_existing: bool) -> bool:
+def should_i_ask_the_expert_for_a_target(
+    conclusions: Union[Any, Dict[str, Any]],
+    case_query: CaseQuery,
+    update_existing: bool,
+) -> bool:
     """
     Determine if the rdr should ask the expert for the target of a given case query.
 
@@ -48,7 +49,7 @@ def should_i_ask_the_expert_for_a_target(conclusions: Union[Any, Dict[str, Any]]
 #                                               case_query: CaseQuery,
 #                                               update_existing: bool):
 #     out = should_i_ask_the_expert_for_a_target(conclusions, case_query, update_existing)
-    # if not out:
-    #     rdr_decorator.fit = True
-    #     should_i_ask_the_expert_for_a_target(conclusions, case_query, ask_always, update_existing)
-    # rdr_decorator.fit = False
+# if not out:
+#     rdr_decorator.fit = True
+#     should_i_ask_the_expert_for_a_target(conclusions, case_query, ask_always, update_existing)
+# rdr_decorator.fit = False

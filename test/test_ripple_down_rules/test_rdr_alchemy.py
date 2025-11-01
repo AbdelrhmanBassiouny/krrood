@@ -8,10 +8,10 @@ from typing_extensions import List, Sequence
 import pandas as pd
 
 from .datasets import Base, MappedAnimal, Species, get_dataset, Habitat, HabitatTable
-from ripple_down_rules.datastructures.dataclasses import CaseQuery
-from ripple_down_rules.experts import Human
-from ripple_down_rules.rdr import SingleClassRDR, MultiClassRDR, GeneralRDR
-from ripple_down_rules.utils import make_set
+from krrood.ripple_down_rules.datastructures.dataclasses import CaseQuery
+from krrood.ripple_down_rules.experts import Human
+from krrood.ripple_down_rules.rdr import SingleClassRDR, MultiClassRDR, GeneralRDR
+from krrood.ripple_down_rules.utils import make_set
 from .test_helpers.helpers import get_fit_scrdr
 
 
@@ -29,9 +29,9 @@ class TestAlchemyRDR(TestCase):
         zoo = get_dataset(111, cls.cache_file)
 
         # get data and targets (as pandas dataframes)
-        X = zoo['features']
-        y = zoo['targets']
-        names = zoo['ids'].values.flatten()
+        X = zoo["features"]
+        y = zoo["targets"]
+        names = zoo["ids"].values.flatten()
         X.loc[:, "name"] = names
 
         cls._init_session_and_insert_data(X)
@@ -41,7 +41,15 @@ class TestAlchemyRDR(TestCase):
         cls.all_cases = cls.session.scalars(query).all()
 
         # init targets
-        category_names = ["mammal", "bird", "reptile", "fish", "amphibian", "insect", "molusc"]
+        category_names = [
+            "mammal",
+            "bird",
+            "reptile",
+            "fish",
+            "amphibian",
+            "insect",
+            "molusc",
+        ]
         category_id_to_name = {i + 1: name for i, name in enumerate(category_names)}
         cls.targets = [Species(category_id_to_name[i]) for i in y.values.flatten()]
 
@@ -65,10 +73,13 @@ class TestAlchemyRDR(TestCase):
         query = select(MappedAnimal)
         result = self.session.scalars(query).all()
         scrdr = SingleClassRDR()
-        case_queries = [CaseQuery(c, "species", (Species,), True, _target=t)
-                        for c, t in zip(self.all_cases, self.targets)]
-        scrdr.fit(case_queries, expert=expert,
-                  animate_tree=draw_tree, session=self.session)
+        case_queries = [
+            CaseQuery(c, "species", (Species,), True, _target=t)
+            for c, t in zip(self.all_cases, self.targets)
+        ]
+        scrdr.fit(
+            case_queries, expert=expert, animate_tree=draw_tree, session=self.session
+        )
 
         cat = scrdr.classify(result[50])
         assert cat == self.targets[50]
@@ -76,12 +87,15 @@ class TestAlchemyRDR(TestCase):
     def test_fit_mcrdr_stop_only(self):
         use_loaded_answers = True
         draw_tree = False
-        expert, filename = self.get_expert_and_file_name(use_loaded_answers,
-                                                         "mcrdr_expert_answers_stop_only_fit")
+        expert, filename = self.get_expert_and_file_name(
+            use_loaded_answers, "mcrdr_expert_answers_stop_only_fit"
+        )
 
         mcrdr = MultiClassRDR()
-        case_queries = [CaseQuery(c, "species", (Species,), True, _target=t)
-                        for c, t in zip(self.all_cases, self.targets)]
+        case_queries = [
+            CaseQuery(c, "species", (Species,), True, _target=t)
+            for c, t in zip(self.all_cases, self.targets)
+        ]
         mcrdr.fit(case_queries, expert=expert, animate_tree=draw_tree)
 
         for case_query in case_queries:
@@ -119,17 +133,26 @@ class TestAlchemyRDR(TestCase):
                 if x.aquatic == 1:
                     habitats.update({HabitatTable(Habitat.water)})
             if len(habitats) == 0:
-                return {'species': t}
+                return {"species": t}
             else:
-                return {'habitats': habitats, 'species': t}
+                return {"habitats": habitats, "species": t}
 
         n = 20
-        habitat_targets = [get_habitat(x, t) for x, t in zip(self.all_cases[:n], self.targets[:n])]
+        habitat_targets = [
+            get_habitat(x, t) for x, t in zip(self.all_cases[:n], self.targets[:n])
+        ]
         case_queries = []
         for case, targets in zip(self.all_cases[:n], habitat_targets):
             for attr, target in targets.items():
-                case_queries.append(CaseQuery(case, attr, (Species,) if attr == 'species' else (HabitatTable,),
-                                              True if attr == 'species' else False, _target=target))
+                case_queries.append(
+                    CaseQuery(
+                        case,
+                        attr,
+                        (Species,) if attr == "species" else (HabitatTable,),
+                        True if attr == "species" else False,
+                        _target=target,
+                    )
+                )
         grdr.fit(case_queries, expert=expert, animate_tree=draw_tree)
         # for rule in grdr.start_rules:
         #     render_tree(rule, use_dot_exporter=True,

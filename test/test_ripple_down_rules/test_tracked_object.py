@@ -1,9 +1,18 @@
 import os
 from os.path import dirname
 
-from ripple_down_rules import *
-from ripple_down_rules.datastructures.tracked_object import X
-from .datasets import Drawer, Handle, Cabinet, View, WorldEntity, Body, Connection, Container
+from krrood.ripple_down_rules import *
+from krrood.ripple_down_rules.datastructures.tracked_object import X
+from .datasets import (
+    Drawer,
+    Handle,
+    Cabinet,
+    View,
+    WorldEntity,
+    Body,
+    Connection,
+    Container,
+)
 
 
 def test_construct_class_hierarchy():
@@ -27,7 +36,12 @@ def test_construct_class_composition_and_dependency():
     assert next(has(Drawer, Handle))
     assert next(has(Cabinet, Drawer))
     assert list(has(Cabinet, X)) == [(Cabinet, Drawer), (Cabinet, Container)]
-    assert list(has(Cabinet, X, recursive=True)) == [(Cabinet, Drawer), (Cabinet, Container), (Cabinet, Container), (Cabinet, Handle)]
+    assert list(has(Cabinet, X, recursive=True)) == [
+        (Cabinet, Drawer),
+        (Cabinet, Container),
+        (Cabinet, Container),
+        (Cabinet, Handle),
+    ]
     assert list(has(X, Handle)) == [(Drawer, Handle)]
     assert list(has(X, Handle, recursive=True)) == [(Drawer, Handle), (Cabinet, Handle)]
     assert isA(Cabinet, View)
@@ -38,6 +52,18 @@ def test_construct_class_composition_and_dependency():
     assert next(has(Cabinet, WorldEntity))
     assert not list(has(Cabinet, Connection, recursive=True))
     assert list(has((Cabinet, Drawer), Handle)) == [(Drawer, Handle)]
-    assert list(has((Cabinet, Drawer), Handle, recursive=True)) == [(Cabinet, Handle), (Drawer, Handle)]
-    assert list(has((Cabinet, Drawer), X)) == [(Cabinet, Drawer), (Cabinet, Container), (Drawer, Container), (Drawer, Handle)]
-    assert list(has((Cabinet, Drawer), (Handle, Container))) == [(Cabinet, Container), (Drawer, Handle), (Drawer, Container)]
+    assert list(has((Cabinet, Drawer), Handle, recursive=True)) == [
+        (Cabinet, Handle),
+        (Drawer, Handle),
+    ]
+    assert list(has((Cabinet, Drawer), X)) == [
+        (Cabinet, Drawer),
+        (Cabinet, Container),
+        (Drawer, Container),
+        (Drawer, Handle),
+    ]
+    assert list(has((Cabinet, Drawer), (Handle, Container))) == [
+        (Cabinet, Container),
+        (Drawer, Handle),
+        (Drawer, Container),
+    ]

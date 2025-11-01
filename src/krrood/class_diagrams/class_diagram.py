@@ -8,7 +8,11 @@ from dataclasses import field, InitVar
 from functools import cached_property, lru_cache
 
 import rustworkx as rx
-from rustworkx_utils import RWXNode
+
+try:
+    from rustworkx_utils import RWXNode
+except ImportError:
+    RWXNode = None
 from typing_extensions import List, Optional, Dict, Union, Tuple
 from typing_extensions import Type
 
@@ -578,6 +582,11 @@ class ClassDiagram:
         :param font_size: Font size for labels
         :param kwargs: Additional keyword arguments passed to RWXNode.visualize()
         """
+        if RWXNode is None:
+            raise ImportError(
+                "rustworkx_utils is required to visualize class diagrams. "
+                "Please install it with `pip install rustworkx_utils`."
+            )
         root_node = self._build_rxnode_tree()
         root_node.visualize(
             filename=filename,

@@ -6,11 +6,14 @@ from unittest import TestCase
 from typing_extensions import List, Any
 
 from .datasets import Robot, Part, PhysicalObject
-from ripple_down_rules.datastructures.case import CaseAttribute
-from ripple_down_rules.datastructures.dataclasses import CaseQuery, CallableExpression
-from ripple_down_rules.experts import Human
-from ripple_down_rules.rdr import SingleClassRDR
-from ripple_down_rules.utils import flatten_list
+from krrood.ripple_down_rules.datastructures.case import CaseAttribute
+from krrood.ripple_down_rules.datastructures.dataclasses import (
+    CaseQuery,
+    CallableExpression,
+)
+from krrood.ripple_down_rules.experts import Human
+from krrood.ripple_down_rules.rdr import SingleClassRDR
+from krrood.ripple_down_rules.utils import flatten_list
 
 
 class RelationalRDRTestCase(TestCase):
@@ -55,7 +58,10 @@ class RelationalRDRTestCase(TestCase):
             expert.load_answers(filename)
 
         scrdr = SingleClassRDR()
-        cat = scrdr.fit_case(CaseQuery(self.robot, "contained_objects", (PhysicalObject,), False), expert=expert)
+        cat = scrdr.fit_case(
+            CaseQuery(self.robot, "contained_objects", (PhysicalObject,), False),
+            expert=expert,
+        )
         # render_tree(scrdr.start_rule, use_dot_exporter=True,
         #             filename=self.test_results_dir + "/relational_scrdr_classify")
         self.assertEqual(cat, self.target)
@@ -68,10 +74,20 @@ class RelationalRDRTestCase(TestCase):
     def test_parse_relational_conditions(self):
         user_input = "case.parts is not None and len(case.parts) > 0"
         conditions = CallableExpression(user_input, bool)
-        self.assertEqual(conditions(self.robot), (self.robot.parts is not None and len(self.robot.parts) > 0))
+        self.assertEqual(
+            conditions(self.robot),
+            (self.robot.parts is not None and len(self.robot.parts) > 0),
+        )
 
     def test_parse_relational_conclusions(self):
         user_input = "flatten_list([p.contained_objects for p in case.parts])"
-        conclusion = CallableExpression(user_input, (CaseAttribute, PhysicalObject,),
-                                        scope={"flatten_list": flatten_list}, mutually_exclusive=False)
+        conclusion = CallableExpression(
+            user_input,
+            (
+                CaseAttribute,
+                PhysicalObject,
+            ),
+            scope={"flatten_list": flatten_list},
+            mutually_exclusive=False,
+        )
         self.assertEqual(conclusion(self.robot), self.target)

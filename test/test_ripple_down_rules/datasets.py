@@ -6,20 +6,29 @@ from dataclasses import dataclass, field
 
 import sqlalchemy
 from sqlalchemy import ForeignKey
-from sqlalchemy.orm import MappedAsDataclass, Mapped, mapped_column, relationship, MappedColumn
+from sqlalchemy.orm import (
+    MappedAsDataclass,
+    Mapped,
+    mapped_column,
+    relationship,
+    MappedColumn,
+)
 from typing_extensions import Tuple, List, Set, Optional, Self, ClassVar
 from ucimlrepo import fetch_ucirepo
 
-from ripple_down_rules.datastructures.case import Case, create_cases_from_dataframe
-from ripple_down_rules.datastructures.enums import Category
-from ripple_down_rules import TrackedObjectMixin
-from ripple_down_rules.rdr_decorators import RDRDecorator
+from krrood.ripple_down_rules.datastructures.case import (
+    Case,
+    create_cases_from_dataframe,
+)
+from krrood.ripple_down_rules.datastructures.enums import Category
+from krrood.ripple_down_rules import TrackedObjectMixin
+from krrood.ripple_down_rules.rdr_decorators import RDRDecorator
 
 
 def load_cached_dataset(cache_file):
     """Loads the dataset from cache if it exists."""
     dataset = {}
-    if '.pkl' not in cache_file:
+    if ".pkl" not in cache_file:
         cache_file += ".pkl"
     for key in ["features", "targets", "ids"]:
         part_file = cache_file.replace(".pkl", f"_{key}.pkl")
@@ -71,7 +80,9 @@ def get_dataset(dataset_id, cache_file: Optional[str] = None):
     return dataset
 
 
-def load_zoo_dataset(cache_file: Optional[str] = None) -> Tuple[List[Case], List[Species]]:
+def load_zoo_dataset(
+    cache_file: Optional[str] = None,
+) -> Tuple[List[Case], List[Species]]:
     """
     Load the zoo dataset.
 
@@ -82,13 +93,21 @@ def load_zoo_dataset(cache_file: Optional[str] = None) -> Tuple[List[Case], List
     zoo = get_dataset(111, cache_file)
 
     # data (as pandas dataframes)
-    X = zoo['features']
-    y = zoo['targets']
+    X = zoo["features"]
+    y = zoo["targets"]
     # get ids as list of strings
-    ids = zoo['ids'].values.flatten()
+    ids = zoo["ids"].values.flatten()
     all_cases = create_cases_from_dataframe(X, name="Animal")
 
-    category_names = ["mammal", "bird", "reptile", "fish", "amphibian", "insect", "molusc"]
+    category_names = [
+        "mammal",
+        "bird",
+        "reptile",
+        "fish",
+        "amphibian",
+        "insect",
+        "molusc",
+    ]
     category_id_to_name = {i + 1: name for i, name in enumerate(category_names)}
     # targets = [getattr(SpeciesCol, category_id_to_name[i]) for i in y.values.flatten()]
     targets = [Species.from_str(category_id_to_name[i]) for i in y.values.flatten()]
@@ -120,15 +139,18 @@ class Habitat(Category):
     """
     A habitat category is a category that represents the habitat of an animal.
     """
+
     land = "land"
     water = "water"
     air = "air"
+
 
 @dataclass(eq=False)
 class PhysicalObject:
     """
     A physical object is an object that can be contained in a container.
     """
+
     name: str
     """
     The name of the object.
@@ -137,17 +159,21 @@ class PhysicalObject:
     """
     The list of objects contained in this object.
     """
-    _rdr_json_dir: ClassVar[str] = os.path.join(os.path.dirname(__file__), "test_results")
+    _rdr_json_dir: ClassVar[str] = os.path.join(
+        os.path.dirname(__file__), "test_results"
+    )
     """
     The directory where the RDR serialized JSON files are stored.
     """
-    _is_a_robot_rdr: ClassVar[RDRDecorator] = RDRDecorator(_rdr_json_dir, (bool,), True,
-                                                 package_name="test")
+    _is_a_robot_rdr: ClassVar[RDRDecorator] = RDRDecorator(
+        _rdr_json_dir, (bool,), True, package_name="test"
+    )
     """
     The RDR decorator that is used to determine if the object is a robot or not.
     """
-    _select_parts_rdr: ClassVar[RDRDecorator] = RDRDecorator(_rdr_json_dir, (Self,), False,
-                                                   package_name="test")
+    _select_parts_rdr: ClassVar[RDRDecorator] = RDRDecorator(
+        _rdr_json_dir, (Self,), False, package_name="test"
+    )
     """
     The RDR decorator that is used to determine if the object is a robot or not.
     """
@@ -165,7 +191,9 @@ class PhysicalObject:
         pass
 
     @_select_parts_rdr.decorator
-    def select_objects_that_are_parts_of_robot(self, objects: List[PhysicalObject], robot: Robot) -> List[PhysicalObject]:
+    def select_objects_that_are_parts_of_robot(
+        self, objects: List[PhysicalObject], robot: Robot
+    ) -> List[PhysicalObject]:
         pass
 
     def __str__(self):
@@ -182,9 +210,10 @@ class PhysicalObject:
     def __hash__(self):
         return hash(self.name)
 
+
 @dataclass(eq=False)
-class Part(PhysicalObject):
-    ...
+class Part(PhysicalObject): ...
+
 
 @dataclass(eq=False)
 class Robot(PhysicalObject):
@@ -249,13 +278,11 @@ class Body(WorldEntity):
 
 
 @dataclass(unsafe_hash=True)
-class Handle(Body):
-    ...
+class Handle(Body): ...
 
 
 @dataclass(unsafe_hash=True)
-class Container(Body):
-    ...
+class Container(Body): ...
 
 
 @dataclass(unsafe_hash=True)
@@ -265,13 +292,11 @@ class Connection(WorldEntity):
 
 
 @dataclass(unsafe_hash=True)
-class FixedConnection(Connection):
-    ...
+class FixedConnection(Connection): ...
 
 
 @dataclass(unsafe_hash=True)
-class PrismaticConnection(Connection):
-    ...
+class PrismaticConnection(Connection): ...
 
 
 @dataclass
@@ -291,8 +316,7 @@ class World:
 
 
 @dataclass(unsafe_hash=True)
-class View(WorldEntity):
-    ...
+class View(WorldEntity): ...
 
 
 @dataclass
@@ -307,7 +331,11 @@ class Drawer(View):
     def __eq__(self, other):
         if not isinstance(other, Drawer):
             return False
-        return self.handle == other.handle and self.container == other.container and self.world == other.world
+        return (
+            self.handle == other.handle
+            and self.container == other.container
+            and self.world == other.world
+        )
 
 
 @dataclass
@@ -321,6 +349,8 @@ class Cabinet(View):
     def __eq__(self, other):
         if not isinstance(other, Cabinet):
             return False
-        return self.container == other.container and self.drawers == other.drawers and self.world == other.world
-
-
+        return (
+            self.container == other.container
+            and self.drawers == other.drawers
+            and self.world == other.world
+        )

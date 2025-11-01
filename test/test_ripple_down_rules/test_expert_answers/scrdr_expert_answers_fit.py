@@ -1,12 +1,12 @@
 from typing_extensions import Any, Callable, List, Optional, Tuple, Type
-from test.datasets import Habitat, MappedAnimal, Species, load_zoo_cases
-from ripple_down_rules.datastructures.case import Case
-from ripple_down_rules.datastructures.dataclasses import CaseQuery
-from ripple_down_rules.datastructures.enums import Category
-from ripple_down_rules.experts import Human
-from ripple_down_rules.rdr import GeneralRDR, MultiClassRDR, SingleClassRDR
-from ripple_down_rules.utils import make_set
-from test.test_helpers.helpers import get_fit_grdr, get_fit_mcrdr, get_fit_scrdr, get_habitat
+from test.test_ripple_down_rules.datasets import Habitat, MappedAnimal, Species, load_zoo_cases
+from krrood.ripple_down_rules.datastructures.case import Case
+from krrood.ripple_down_rules.datastructures.dataclasses import CaseQuery
+from krrood.ripple_down_rules.datastructures.enums import Category
+from krrood.ripple_down_rules.experts import Human
+from krrood.ripple_down_rules.rdr import GeneralRDR, MultiClassRDR, SingleClassRDR
+from krrood.ripple_down_rules.utils import make_set
+from test.test_ripple_down_rules.test_helpers.helpers import get_fit_grdr, get_fit_mcrdr, get_fit_scrdr, get_habitat
 
 def conditions_for_mapped_animal_species_of_type_species(case: MappedAnimal) -> bool:
     """Get conditions on whether it's possible to conclude a value for MappedAnimal.species  of type Species."""
@@ -19,14 +19,14 @@ def conditions_for_mapped_animal_species_of_type_species(case: MappedAnimal) -> 
 
 
 from typing_extensions import Any, Callable, List, Optional, Tuple, Type
-from test.datasets import Habitat, MappedAnimal, Species, load_zoo_cases
-from ripple_down_rules.datastructures.case import Case
-from ripple_down_rules.datastructures.dataclasses import CaseQuery
-from ripple_down_rules.datastructures.enums import Category
-from ripple_down_rules.experts import Human
-from ripple_down_rules.rdr import GeneralRDR, MultiClassRDR, SingleClassRDR
-from ripple_down_rules.utils import make_set
-from test.test_helpers.helpers import get_fit_grdr, get_fit_mcrdr, get_fit_scrdr, get_habitat
+from test.test_ripple_down_rules.datasets import Habitat, MappedAnimal, Species, load_zoo_cases
+from krrood.ripple_down_rules.datastructures.case import Case
+from krrood.ripple_down_rules.datastructures.dataclasses import CaseQuery
+from krrood.ripple_down_rules.datastructures.enums import Category
+from krrood.ripple_down_rules.experts import Human
+from krrood.ripple_down_rules.rdr import GeneralRDR, MultiClassRDR, SingleClassRDR
+from krrood.ripple_down_rules.utils import make_set
+from test.test_ripple_down_rules.test_helpers.helpers import get_fit_grdr, get_fit_mcrdr, get_fit_scrdr, get_habitat
 
 def conditions_for_mapped_animal_species_of_type_species(case: MappedAnimal) -> bool:
     """Get conditions on whether it's possible to conclude a value for MappedAnimal.species  of type Species."""
@@ -39,14 +39,14 @@ def conditions_for_mapped_animal_species_of_type_species(case: MappedAnimal) -> 
 
 
 from typing_extensions import Any, Callable, List, Optional, Tuple, Type
-from test.datasets import Habitat, MappedAnimal, Species, load_zoo_cases
-from ripple_down_rules.datastructures.case import Case
-from ripple_down_rules.datastructures.dataclasses import CaseQuery
-from ripple_down_rules.datastructures.enums import Category
-from ripple_down_rules.experts import Human
-from ripple_down_rules.rdr import GeneralRDR, MultiClassRDR, SingleClassRDR
-from ripple_down_rules.utils import make_set
-from test.test_helpers.helpers import get_fit_grdr, get_fit_mcrdr, get_fit_scrdr, get_habitat
+from test.test_ripple_down_rules.datasets import Habitat, MappedAnimal, Species, load_zoo_cases
+from krrood.ripple_down_rules.datastructures.case import Case
+from krrood.ripple_down_rules.datastructures.dataclasses import CaseQuery
+from krrood.ripple_down_rules.datastructures.enums import Category
+from krrood.ripple_down_rules.experts import Human
+from krrood.ripple_down_rules.rdr import GeneralRDR, MultiClassRDR, SingleClassRDR
+from krrood.ripple_down_rules.utils import make_set
+from test.test_ripple_down_rules.test_helpers.helpers import get_fit_grdr, get_fit_mcrdr, get_fit_scrdr, get_habitat
 
 def conditions_for_mapped_animal_species_of_type_species(case: MappedAnimal) -> bool:
     """Get conditions on whether it's possible to conclude a value for MappedAnimal.species  of type Species."""
@@ -59,14 +59,14 @@ def conditions_for_mapped_animal_species_of_type_species(case: MappedAnimal) -> 
 
 
 from typing_extensions import Any, Callable, List, Optional, Tuple, Type
-from test.datasets import Habitat, MappedAnimal, Species, load_zoo_cases
-from ripple_down_rules.datastructures.case import Case
-from ripple_down_rules.datastructures.dataclasses import CaseQuery
-from ripple_down_rules.datastructures.enums import Category
-from ripple_down_rules.experts import Human
-from ripple_down_rules.rdr import GeneralRDR, MultiClassRDR, SingleClassRDR
-from ripple_down_rules.utils import make_set
-from test.test_helpers.helpers import get_fit_grdr, get_fit_mcrdr, get_fit_scrdr, get_habitat
+from test.test_ripple_down_rules.datasets import Habitat, MappedAnimal, Species, load_zoo_cases
+from krrood.ripple_down_rules.datastructures.case import Case
+from krrood.ripple_down_rules.datastructures.dataclasses import CaseQuery
+from krrood.ripple_down_rules.datastructures.enums import Category
+from krrood.ripple_down_rules.experts import Human
+from krrood.ripple_down_rules.rdr import GeneralRDR, MultiClassRDR, SingleClassRDR
+from krrood.ripple_down_rules.utils import make_set
+from test.test_ripple_down_rules.test_helpers.helpers import get_fit_grdr, get_fit_mcrdr, get_fit_scrdr, get_habitat
 
 def conditions_for_mapped_animal_species_of_type_species(case: MappedAnimal) -> bool:
     """Get conditions on whether it's possible to conclude a value for MappedAnimal.species  of type Species."""
@@ -79,14 +79,14 @@ def conditions_for_mapped_animal_species_of_type_species(case: MappedAnimal) -> 
 
 
 from typing_extensions import Any, Callable, List, Optional, Tuple, Type
-from test.datasets import Habitat, MappedAnimal, Species, load_zoo_cases
-from ripple_down_rules.datastructures.case import Case
-from ripple_down_rules.datastructures.dataclasses import CaseQuery
-from ripple_down_rules.datastructures.enums import Category
-from ripple_down_rules.experts import Human
-from ripple_down_rules.rdr import GeneralRDR, MultiClassRDR, SingleClassRDR
-from ripple_down_rules.utils import make_set
-from test.test_helpers.helpers import get_fit_grdr, get_fit_mcrdr, get_fit_scrdr, get_habitat
+from test.test_ripple_down_rules.datasets import Habitat, MappedAnimal, Species, load_zoo_cases
+from krrood.ripple_down_rules.datastructures.case import Case
+from krrood.ripple_down_rules.datastructures.dataclasses import CaseQuery
+from krrood.ripple_down_rules.datastructures.enums import Category
+from krrood.ripple_down_rules.experts import Human
+from krrood.ripple_down_rules.rdr import GeneralRDR, MultiClassRDR, SingleClassRDR
+from krrood.ripple_down_rules.utils import make_set
+from test.test_ripple_down_rules.test_helpers.helpers import get_fit_grdr, get_fit_mcrdr, get_fit_scrdr, get_habitat
 
 def conditions_for_mapped_animal_species_of_type_species(case: MappedAnimal) -> bool:
     """Get conditions on whether it's possible to conclude a value for MappedAnimal.species  of type Species."""
@@ -99,14 +99,14 @@ def conditions_for_mapped_animal_species_of_type_species(case: MappedAnimal) -> 
 
 
 from typing_extensions import Any, Callable, List, Optional, Tuple, Type
-from test.datasets import Habitat, MappedAnimal, Species, load_zoo_cases
-from ripple_down_rules.datastructures.case import Case
-from ripple_down_rules.datastructures.dataclasses import CaseQuery
-from ripple_down_rules.datastructures.enums import Category
-from ripple_down_rules.experts import Human
-from ripple_down_rules.rdr import GeneralRDR, MultiClassRDR, SingleClassRDR
-from ripple_down_rules.utils import make_set
-from test.test_helpers.helpers import get_fit_grdr, get_fit_mcrdr, get_fit_scrdr, get_habitat
+from test.test_ripple_down_rules.datasets import Habitat, MappedAnimal, Species, load_zoo_cases
+from krrood.ripple_down_rules.datastructures.case import Case
+from krrood.ripple_down_rules.datastructures.dataclasses import CaseQuery
+from krrood.ripple_down_rules.datastructures.enums import Category
+from krrood.ripple_down_rules.experts import Human
+from krrood.ripple_down_rules.rdr import GeneralRDR, MultiClassRDR, SingleClassRDR
+from krrood.ripple_down_rules.utils import make_set
+from test.test_ripple_down_rules.test_helpers.helpers import get_fit_grdr, get_fit_mcrdr, get_fit_scrdr, get_habitat
 
 def conditions_for_mapped_animal_species_of_type_species(case: MappedAnimal) -> bool:
     """Get conditions on whether it's possible to conclude a value for MappedAnimal.species  of type Species."""
@@ -119,14 +119,14 @@ def conditions_for_mapped_animal_species_of_type_species(case: MappedAnimal) -> 
 
 
 from typing_extensions import Any, Callable, List, Optional, Tuple, Type
-from test.datasets import Habitat, MappedAnimal, Species, load_zoo_cases
-from ripple_down_rules.datastructures.case import Case
-from ripple_down_rules.datastructures.dataclasses import CaseQuery
-from ripple_down_rules.datastructures.enums import Category
-from ripple_down_rules.experts import Human
-from ripple_down_rules.rdr import GeneralRDR, MultiClassRDR, SingleClassRDR
-from ripple_down_rules.utils import make_set
-from test.test_helpers.helpers import get_fit_grdr, get_fit_mcrdr, get_fit_scrdr, get_habitat
+from test.test_ripple_down_rules.datasets import Habitat, MappedAnimal, Species, load_zoo_cases
+from krrood.ripple_down_rules.datastructures.case import Case
+from krrood.ripple_down_rules.datastructures.dataclasses import CaseQuery
+from krrood.ripple_down_rules.datastructures.enums import Category
+from krrood.ripple_down_rules.experts import Human
+from krrood.ripple_down_rules.rdr import GeneralRDR, MultiClassRDR, SingleClassRDR
+from krrood.ripple_down_rules.utils import make_set
+from test.test_ripple_down_rules.test_helpers.helpers import get_fit_grdr, get_fit_mcrdr, get_fit_scrdr, get_habitat
 
 def conditions_for_mapped_animal_species_of_type_species(case: MappedAnimal) -> bool:
     """Get conditions on whether it's possible to conclude a value for MappedAnimal.species  of type Species."""
@@ -139,14 +139,14 @@ def conditions_for_mapped_animal_species_of_type_species(case: MappedAnimal) -> 
 
 
 from typing_extensions import Any, Callable, List, Optional, Tuple, Type
-from test.datasets import Habitat, MappedAnimal, Species, load_zoo_cases
-from ripple_down_rules.datastructures.case import Case
-from ripple_down_rules.datastructures.dataclasses import CaseQuery
-from ripple_down_rules.datastructures.enums import Category
-from ripple_down_rules.experts import Human
-from ripple_down_rules.rdr import GeneralRDR, MultiClassRDR, SingleClassRDR
-from ripple_down_rules.utils import make_set
-from test.test_helpers.helpers import get_fit_grdr, get_fit_mcrdr, get_fit_scrdr, get_habitat
+from test.test_ripple_down_rules.datasets import Habitat, MappedAnimal, Species, load_zoo_cases
+from krrood.ripple_down_rules.datastructures.case import Case
+from krrood.ripple_down_rules.datastructures.dataclasses import CaseQuery
+from krrood.ripple_down_rules.datastructures.enums import Category
+from krrood.ripple_down_rules.experts import Human
+from krrood.ripple_down_rules.rdr import GeneralRDR, MultiClassRDR, SingleClassRDR
+from krrood.ripple_down_rules.utils import make_set
+from test.test_ripple_down_rules.test_helpers.helpers import get_fit_grdr, get_fit_mcrdr, get_fit_scrdr, get_habitat
 
 def conditions_for_mapped_animal_species_of_type_species(case: MappedAnimal) -> bool:
     """Get conditions on whether it's possible to conclude a value for MappedAnimal.species  of type Species."""
@@ -159,14 +159,14 @@ def conditions_for_mapped_animal_species_of_type_species(case: MappedAnimal) -> 
 
 
 from typing_extensions import Any, Callable, List, Optional, Tuple, Type
-from test.datasets import Habitat, MappedAnimal, Species, load_zoo_cases
-from ripple_down_rules.datastructures.case import Case
-from ripple_down_rules.datastructures.dataclasses import CaseQuery
-from ripple_down_rules.datastructures.enums import Category
-from ripple_down_rules.experts import Human
-from ripple_down_rules.rdr import GeneralRDR, MultiClassRDR, SingleClassRDR
-from ripple_down_rules.utils import make_set
-from test.test_helpers.helpers import get_fit_grdr, get_fit_mcrdr, get_fit_scrdr, get_habitat
+from test.test_ripple_down_rules.datasets import Habitat, MappedAnimal, Species, load_zoo_cases
+from krrood.ripple_down_rules.datastructures.case import Case
+from krrood.ripple_down_rules.datastructures.dataclasses import CaseQuery
+from krrood.ripple_down_rules.datastructures.enums import Category
+from krrood.ripple_down_rules.experts import Human
+from krrood.ripple_down_rules.rdr import GeneralRDR, MultiClassRDR, SingleClassRDR
+from krrood.ripple_down_rules.utils import make_set
+from test.test_ripple_down_rules.test_helpers.helpers import get_fit_grdr, get_fit_mcrdr, get_fit_scrdr, get_habitat
 
 def conditions_for_mapped_animal_species_of_type_species(case: MappedAnimal) -> bool:
     """Get conditions on whether it's possible to conclude a value for MappedAnimal.species  of type Species."""
@@ -179,14 +179,14 @@ def conditions_for_mapped_animal_species_of_type_species(case: MappedAnimal) -> 
 
 
 from typing_extensions import Any, Callable, List, Optional, Tuple, Type
-from test.datasets import Habitat, MappedAnimal, Species, load_zoo_cases
-from ripple_down_rules.datastructures.case import Case
-from ripple_down_rules.datastructures.dataclasses import CaseQuery
-from ripple_down_rules.datastructures.enums import Category
-from ripple_down_rules.experts import Human
-from ripple_down_rules.rdr import GeneralRDR, MultiClassRDR, SingleClassRDR
-from ripple_down_rules.utils import make_set
-from test.test_helpers.helpers import get_fit_grdr, get_fit_mcrdr, get_fit_scrdr, get_habitat
+from test.test_ripple_down_rules.datasets import Habitat, MappedAnimal, Species, load_zoo_cases
+from krrood.ripple_down_rules.datastructures.case import Case
+from krrood.ripple_down_rules.datastructures.dataclasses import CaseQuery
+from krrood.ripple_down_rules.datastructures.enums import Category
+from krrood.ripple_down_rules.experts import Human
+from krrood.ripple_down_rules.rdr import GeneralRDR, MultiClassRDR, SingleClassRDR
+from krrood.ripple_down_rules.utils import make_set
+from test.test_ripple_down_rules.test_helpers.helpers import get_fit_grdr, get_fit_mcrdr, get_fit_scrdr, get_habitat
 
 def conditions_for_mapped_animal_species_of_type_species(case: MappedAnimal) -> bool:
     """Get conditions on whether it's possible to conclude a value for MappedAnimal.species  of type Species."""
@@ -199,14 +199,14 @@ def conditions_for_mapped_animal_species_of_type_species(case: MappedAnimal) -> 
 
 
 from typing_extensions import Any, Callable, List, Optional, Tuple, Type
-from test.datasets import Habitat, MappedAnimal, Species, load_zoo_cases
-from ripple_down_rules.datastructures.case import Case
-from ripple_down_rules.datastructures.dataclasses import CaseQuery
-from ripple_down_rules.datastructures.enums import Category
-from ripple_down_rules.experts import Human
-from ripple_down_rules.rdr import GeneralRDR, MultiClassRDR, SingleClassRDR
-from ripple_down_rules.utils import make_set
-from test.test_helpers.helpers import get_fit_grdr, get_fit_mcrdr, get_fit_scrdr, get_habitat
+from test.test_ripple_down_rules.datasets import Habitat, MappedAnimal, Species, load_zoo_cases
+from krrood.ripple_down_rules.datastructures.case import Case
+from krrood.ripple_down_rules.datastructures.dataclasses import CaseQuery
+from krrood.ripple_down_rules.datastructures.enums import Category
+from krrood.ripple_down_rules.experts import Human
+from krrood.ripple_down_rules.rdr import GeneralRDR, MultiClassRDR, SingleClassRDR
+from krrood.ripple_down_rules.utils import make_set
+from test.test_ripple_down_rules.test_helpers.helpers import get_fit_grdr, get_fit_mcrdr, get_fit_scrdr, get_habitat
 
 def conditions_for_mapped_animal_species_of_type_species(case: MappedAnimal) -> bool:
     """Get conditions on whether it's possible to conclude a value for MappedAnimal.species  of type Species."""
@@ -219,14 +219,14 @@ def conditions_for_mapped_animal_species_of_type_species(case: MappedAnimal) -> 
 
 
 from typing_extensions import Any, Callable, List, Optional, Tuple, Type
-from test.datasets import Habitat, MappedAnimal, Species, load_zoo_cases
-from ripple_down_rules.datastructures.case import Case
-from ripple_down_rules.datastructures.dataclasses import CaseQuery
-from ripple_down_rules.datastructures.enums import Category
-from ripple_down_rules.experts import Human
-from ripple_down_rules.rdr import GeneralRDR, MultiClassRDR, SingleClassRDR
-from ripple_down_rules.utils import make_set
-from test.test_helpers.helpers import get_fit_grdr, get_fit_mcrdr, get_fit_scrdr, get_habitat
+from test.test_ripple_down_rules.datasets import Habitat, MappedAnimal, Species, load_zoo_cases
+from krrood.ripple_down_rules.datastructures.case import Case
+from krrood.ripple_down_rules.datastructures.dataclasses import CaseQuery
+from krrood.ripple_down_rules.datastructures.enums import Category
+from krrood.ripple_down_rules.experts import Human
+from krrood.ripple_down_rules.rdr import GeneralRDR, MultiClassRDR, SingleClassRDR
+from krrood.ripple_down_rules.utils import make_set
+from test.test_ripple_down_rules.test_helpers.helpers import get_fit_grdr, get_fit_mcrdr, get_fit_scrdr, get_habitat
 
 def conditions_for_mapped_animal_species_of_type_species(case: MappedAnimal) -> bool:
     """Get conditions on whether it's possible to conclude a value for MappedAnimal.species  of type Species."""

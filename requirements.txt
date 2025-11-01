@@ -1,9 +1,20 @@
-rdflib
 jinja2
-owlrl
 typing-extensions>=4.12.2
 rustworkx>=0.14.0
 sqlalchemy
 black
 sortedcontainers
-SPARQLWrapper
+
+# ripple down rules
+anytree>=2.8.0
+ordered_set>=4
+pygraphviz>=1.7
+graphviz
+tabulate
+ipython
+requests
+colorama
+pygments
+pandas
+pyparsing>=3.2.3
+pydot

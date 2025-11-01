@@ -2,7 +2,11 @@ from IPython.core.interactiveshell import ExecutionInfo
 from IPython.terminal.embed import InteractiveShellEmbed
 from traitlets.config import Config
 
-from ripple_down_rules.utils import capture_variable_assignment, contains_return_statement, extract_dependencies
+from krrood.ripple_down_rules.utils import (
+    capture_variable_assignment,
+    contains_return_statement,
+    extract_dependencies,
+)
 
 
 class IpythonShell(InteractiveShellEmbed):
@@ -48,10 +52,10 @@ class IpythonShellManager:
         self.shell()
         self.all_code_lines = extract_dependencies(self.shell.all_lines)
         user_input = f"def get_value(case):\n    "
-        user_input += '\n    '.join(self.all_code_lines)
+        user_input += "\n    ".join(self.all_code_lines)
         print(user_input)
-        eval(compile(user_input, '<string>', 'exec'), self.scope)
-        print(self.scope['get_value'](4))
+        eval(compile(user_input, "<string>", "exec"), self.scope)
+        print(self.scope["get_value"](4))
 
 
 def run_ipython_shell():
@@ -62,7 +66,7 @@ def run_ipython_shell():
     mgr.run()
     print(mgr.all_code_lines)
     # Apply changes to outer scope
-    x = scope['x']
+    x = scope["x"]
     print(f"Back in code: x={x}")
 
 

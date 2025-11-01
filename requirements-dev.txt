@@ -1,7 +1,6 @@
 -r requirements-dev-ci.txt
+-r requirements-gui.txt
+-r requirements-viz.txt
+ucimlrepo>=0.0.7
 rustworkx_utils
-tqdm
-pdbpp
-pytest
-omegaconf
 pydot
