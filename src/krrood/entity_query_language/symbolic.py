@@ -759,13 +759,16 @@ class QueryObjectDescriptor(SymbolicExpression[T], ABC):
         self._order_by = (variable, descending)
         return self
 
-    def distinct(self, on: Optional[Tuple[Selectable, ...]] = None) -> Self:
+    def distinct(
+        self, on: TypingUnion[Selectable, Tuple[Selectable, ...], None] = None
+    ) -> Self:
         """
         Apply distinctness constraint to the query object descriptor results.
 
         :param on: The variables to be used for distinctness.
         :return: This query object descriptor.
         """
+        on = make_list(on) if on else []
 
         def get_distinct_results(
             results_gen: Iterable[Dict[int, HashedValue]],
@@ -792,8 +795,11 @@ class QueryObjectDescriptor(SymbolicExpression[T], ABC):
          is used.
         :return: This query object descriptor.
         """
-
-        return self._max_or_min(variable, max_=True)
+        variable = variable or self._selected_variables[0]
+        key = lambda res: res[variable._id_].value
+        mapping = lambda results_gen: [max(results_gen, key=key)]
+        self._results_mapping.append(mapping)
+        return self
 
     def min(self, variable: Optional[CanBehaveLikeAVariable[T]] = None) -> Self:
         """
@@ -804,36 +810,23 @@ class QueryObjectDescriptor(SymbolicExpression[T], ABC):
          is used.
         :return: This query object descriptor.
         """
-
-        return self._max_or_min(variable, max_=False)
-
-    def _max_or_min(
-        self, variable: Optional[CanBehaveLikeAVariable[T]] = None, max_: bool = True
-    ) -> Self:
-        """
-        Add a result mapping that maps the results to the result that has the maximum/minimum
-        value for the given variable.
-
-        :param variable: The variable for which the maximum/minimum value is to be found, if None, the first selected variable
-         is used.
-        :return: This query object descriptor.
-        """
-
-        comparison_op = operator.gt if max_ else operator.lt
         variable = variable or self._selected_variables[0]
+        key = lambda res: res[variable._id_].value
+        mapping = lambda results_gen: [min(results_gen, key=key)]
+        self._results_mapping.append(mapping)
+        return self
 
-        def get_max_results(
-            results_gen: Iterable[Dict[int, HashedValue]],
-        ) -> Iterable[Dict[int, HashedValue]]:
-            max_val, bindings_with_max_val = None, None
-            for res in results_gen:
-                value = res[variable._id_].value  # evaluate the variable on the item
-                if max_val is None or comparison_op(value, max_val):
-                    max_val = value
-                    bindings_with_max_val = res
-            yield from [bindings_with_max_val] if bindings_with_max_val else []
-
-        self._results_mapping.append(get_max_results)
+    def sum(self, variable: Optional[CanBehaveLikeAVariable[T]] = None):
+        """
+        Computes the sum of values produced by the given variable.
+        If variable is None, tries to sum the rows directly (rare case).
+        """
+        variable = variable or self._selected_variables[0]
+        map_to_var_val = lambda res: res[variable._id_].value
+        mapping = lambda results_gen: [
+            {variable._id_: HashedValue(sum(map(map_to_var_val, results_gen)))}
+        ]
+        self._results_mapping.append(mapping)
         return self
 
     @lru_cache(maxsize=None)

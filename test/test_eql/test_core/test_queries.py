@@ -765,6 +765,15 @@ def test_order_by(handles_and_containers_world):
     assert list(query.evaluate()) == sorted(names, reverse=False)
 
 
+def test_sum(handles_and_containers_world):
+    hieghts = [1, 2, 3, 4, 5]
+    hieghts_var = let(int, domain=hieghts)
+    query = an(entity(hieghts_var).sum())
+    results = list(query.evaluate())
+    assert len(results) == 1
+    assert results[0] == sum(hieghts)
+
+
 def test_limit(handles_and_containers_world):
     world = handles_and_containers_world
     query = an(
