@@ -769,9 +769,7 @@ class QueryObjectDescriptor(SymbolicExpression[T], ABC):
             on_ids = [v._id_ for v in on] if on else []
             for res in results_gen:
                 bindings = (
-                    res.bindings
-                    if not on
-                    else {k: v for k, v in res if k._id_ in on_ids}
+                    res.bindings if not on else {k: v for k, v in res if k in on_ids}
                 )
                 if not seen.check(bindings):
                     yield res
@@ -905,13 +903,7 @@ class QueryObjectDescriptor(SymbolicExpression[T], ABC):
         }
         for sol in generate_combinations(var_val_gen):
             var_val = {var._id_: sol[var][var._id_] for var in self._selected_variables}
-            self._is_false_ = self._is_false_ or any(
-                sol[var].is_false for var in self._selected_variables
-            )
-            # result = {**sources, **var_val}
-            # for result_mapping in self._results_mapping:
-            #     yield from result_mapping([OperationResult(sources, False, self)])
-            yield OperationResult({**sources, **var_val}, self._is_false_, self)
+            yield OperationResult({**sources, **var_val}, False, self)
 
     @cached_property
     def _all_variable_instances_(self) -> List[Variable]:
