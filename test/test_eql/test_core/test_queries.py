@@ -46,6 +46,7 @@ from ...dataset.semantic_world_like_classes import (
     FruitBox,
     ContainsType,
     Apple,
+    Drawer,
 )
 
 
@@ -771,3 +772,12 @@ def test_limit(handles_and_containers_world):
         list(query.evaluate(limit=0))
     with pytest.raises(NonPositiveLimitValue):
         list(query.evaluate(limit="0"))
+
+
+def test_unification_dict(handles_and_containers_world):
+    drawer = let(Drawer, domain=None)
+    drawer_1 = an(entity(drawer))
+    handle = let(Handle, domain=None)
+    query = a(set_of((drawer, handle), drawer.handle.name == handle.name))
+    results = list(query.evaluate())
+    assert results[0][drawer] is results[0][drawer_1]

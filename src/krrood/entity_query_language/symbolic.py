@@ -641,7 +641,16 @@ class ResultQuantifier(CanBehaveLikeAVariable[T], ABC):
 
 class UnificationDict(UserDict):
     """
-    A dictionary which maps all expressions that are on a single variable to the original variable id.
+    A dictionary which can take different types as keys, it can take a Selectable, or a string with the name of a
+     selectable. It unifies a query on a variable with the variable, so they both can be given as the selectable and
+     this will give the same result since both refer to the same variable.
+     Example:
+         >>> drawer = let(Drawer, domain=None)
+         >>> drawer_1 = an(entity(drawer))
+         >>> handle = let(Handle, domain=None)
+         >>> query = a(set_of((drawer, handle), drawer.handle.name == handle.name))
+         >>> results = list(query.evaluate())
+         >>> assert results[0][drawer] is results[0][drawer_1]
     """
 
     def __init__(self, *args, **kwargs):
@@ -653,8 +662,7 @@ class UnificationDict(UserDict):
     def __getitem__(self, key: CanBehaveLikeAVariable[T]) -> T:
         if isinstance(key, str):
             return self.name_value_map[key].value
-        key = key._id_expression_map_[key._var_._id_]
-        return super().__getitem__(key).value
+        return super().__getitem__(key._var_).value
 
 
 @dataclass(eq=False, repr=False)
