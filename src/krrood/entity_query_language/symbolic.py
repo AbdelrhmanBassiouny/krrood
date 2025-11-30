@@ -964,7 +964,7 @@ class QueryObjectDescriptor(SymbolicExpression[T], ABC):
         for result_mapping in self._results_mapping:
             results = result_mapping(results)
         if self._order_by:
-            results = self._order_(results)
+            results = self._order(results)
         return results
 
     @cached_property
