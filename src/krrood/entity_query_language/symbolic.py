@@ -783,38 +783,44 @@ class QueryObjectDescriptor(SymbolicExpression[T], ABC):
         self._results_mapping.append(get_distinct_results)
         return self
 
-    def max_(self, variable: CanBehaveLikeAVariable[T]) -> Self:
+    def max_(self, variable: Optional[CanBehaveLikeAVariable[T]] = None) -> Self:
         """
         Add a result mapping that maps the results to the result that has the maximum
         value for the given variable.
 
-        :param variable: The variable for which the maximum value is to be found.
+        :param variable: The variable for which the maximum value is to be found, if None, the first selected variable
+         is used.
         :return: This query object descriptor.
         """
 
         return self._max_or_min(variable, max_=True)
 
-    def min_(self, variable: CanBehaveLikeAVariable[T]) -> Self:
+    def min_(self, variable: Optional[CanBehaveLikeAVariable[T]] = None) -> Self:
         """
         Add a result mapping that maps the results to the result that has the minimum
         value for the given variable.
 
-        :param variable: The variable for which the minimum value is to be found.
+        :param variable: The variable for which the minimum value is to be found, if None, the first selected variable
+         is used.
         :return: This query object descriptor.
         """
 
         return self._max_or_min(variable, max_=False)
 
     def _max_or_min(
-        self, variable: CanBehaveLikeAVariable[T], max_: bool = True
+        self, variable: Optional[CanBehaveLikeAVariable[T]] = None, max_: bool = True
     ) -> Self:
         """
         Add a result mapping that maps the results to the result that has the maximum/minimum
         value for the given variable.
 
-        :param variable: The variable for which the maximum/minimum value is to be found.
+        :param variable: The variable for which the maximum/minimum value is to be found, if None, the first selected variable
+         is used.
         :return: This query object descriptor.
         """
+
+        comparison_op = operator.gt if max_ else operator.lt
+        variable = variable or self._selected_variables[0]
 
         def get_max_results(
             results_gen: Iterable[Dict[int, HashedValue]],
@@ -822,7 +828,7 @@ class QueryObjectDescriptor(SymbolicExpression[T], ABC):
             max_val, bindings_with_max_val = None, None
             for res in results_gen:
                 value = res[variable._id_].value  # evaluate the variable on the item
-                if max_val is None or value > max_val:
+                if max_val is None or comparison_op(value, max_val):
                     max_val = value
                     bindings_with_max_val = res
             yield from [bindings_with_max_val] if bindings_with_max_val else []
