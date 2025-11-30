@@ -653,10 +653,10 @@ class UnificationDict(UserDict):
          >>> assert results[0][drawer] is results[0][drawer_1]
     """
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+    def __init__(self, dict_value: Dict[Selectable, HashedValue[T]]):
+        super().__init__(dict_value)
         self.name_value_map = {
-            v._selection_name_: v for v in args[0].keys() if v._selection_name_
+            k._selection_name_: v for k, v in dict_value.items() if k._selection_name_
         }
 
     def __getitem__(self, key: CanBehaveLikeAVariable[T]) -> T:
