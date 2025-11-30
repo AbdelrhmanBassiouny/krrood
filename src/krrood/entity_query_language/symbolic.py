@@ -727,7 +727,9 @@ class Count(ResultQuantifier[T]):
         return len(list(super().evaluate()))
 
 
-ResultMapping = Callable[[Iterable[OperationResult]], Iterable[OperationResult]]
+ResultMapping = Callable[
+    [Iterable[Dict[int, HashedValue]]], Iterable[Dict[int, HashedValue]]
+]
 """
 A function that maps the results of a query object descriptor to a new set of results.
 """
@@ -742,8 +744,11 @@ class QueryObjectDescriptor(SymbolicExpression[T], ABC):
 
     _child_: Optional[SymbolicExpression[T]] = field(default=None)
     _selected_variables: List[CanBehaveLikeAVariable[T]] = field(default_factory=list)
-    _results_mapping: List[ResultMapping] = field(init=False)
+    _results_mapping: List[ResultMapping] = field(init=False, default_factory=list)
     _order_by: Optional[Tuple[Selectable, bool]] = field(default=None, init=False)
+    _seen_results: SeenSet[Dict[int, HashedValue]] = field(
+        init=False, default_factory=SeenSet
+    )
 
     def __post_init__(self):
         super().__post_init__()
@@ -763,19 +768,66 @@ class QueryObjectDescriptor(SymbolicExpression[T], ABC):
         """
 
         def get_distinct_results(
-            results_gen: Iterable[OperationResult],
-        ) -> Iterable[OperationResult]:
-            seen = SeenSet()
+            results_gen: Iterable[Dict[int, HashedValue]],
+        ) -> Iterable[Dict[int, HashedValue]]:
             on_ids = [v._id_ for v in on] if on else []
             for res in results_gen:
                 bindings = (
-                    res.bindings if not on else {k: v for k, v in res if k in on_ids}
+                    res if not on else {k: v for k, v in res.items() if k in on_ids}
                 )
-                if not seen.check(bindings):
+                bindings = {k: v.value for k, v in bindings.items()}
+                if not self._seen_results.check(bindings):
                     yield res
-                    seen.add(res.bindings)
+                    self._seen_results.add(bindings)
 
         self._results_mapping.append(get_distinct_results)
+        return self
+
+    def max_(self, variable: CanBehaveLikeAVariable[T]) -> Self:
+        """
+        Add a result mapping that maps the results to the result that has the maximum
+        value for the given variable.
+
+        :param variable: The variable for which the maximum value is to be found.
+        :return: This query object descriptor.
+        """
+
+        return self._max_or_min(variable, max_=True)
+
+    def min_(self, variable: CanBehaveLikeAVariable[T]) -> Self:
+        """
+        Add a result mapping that maps the results to the result that has the minimum
+        value for the given variable.
+
+        :param variable: The variable for which the minimum value is to be found.
+        :return: This query object descriptor.
+        """
+
+        return self._max_or_min(variable, max_=False)
+
+    def _max_or_min(
+        self, variable: CanBehaveLikeAVariable[T], max_: bool = True
+    ) -> Self:
+        """
+        Add a result mapping that maps the results to the result that has the maximum/minimum
+        value for the given variable.
+
+        :param variable: The variable for which the maximum/minimum value is to be found.
+        :return: This query object descriptor.
+        """
+
+        def get_max_results(
+            results_gen: Iterable[Dict[int, HashedValue]],
+        ) -> Iterable[Dict[int, HashedValue]]:
+            max_val, bindings_with_max_val = None, None
+            for res in results_gen:
+                value = res[variable._id_].value  # evaluate the variable on the item
+                if max_val is None or value > max_val:
+                    max_val = value
+                    bindings_with_max_val = res
+            yield from [bindings_with_max_val] if bindings_with_max_val else []
+
+        self._results_mapping.append(get_max_results)
         return self
 
     @lru_cache(maxsize=None)
@@ -809,7 +861,9 @@ class QueryObjectDescriptor(SymbolicExpression[T], ABC):
             self.evaluate_conclusions_and_update_bindings(values)
             if self.any_selected_variable_is_inferred_and_unbound(values):
                 continue
-            yield from self.evaluate_selected_variables(values.bindings)
+            selected_vars_bindings = self._evaluate_selected_variables(values.bindings)
+            for result in self._apply_results_mapping(selected_vars_bindings):
+                yield OperationResult({**sources, **result}, False, self)
 
     @staticmethod
     def variable_is_inferred(var: CanBehaveLikeAVariable[T]) -> bool:
@@ -888,9 +942,9 @@ class QueryObjectDescriptor(SymbolicExpression[T], ABC):
         else:
             yield from [OperationResult(sources, False, self)]
 
-    def evaluate_selected_variables(
+    def _evaluate_selected_variables(
         self, sources: Dict[int, HashedValue]
-    ) -> Iterable[OperationResult]:
+    ) -> Iterable[Dict[int, HashedValue]]:
         """
         Evaluate the selected variables by generating combinations of values from their evaluation generators.
 
@@ -902,8 +956,16 @@ class QueryObjectDescriptor(SymbolicExpression[T], ABC):
             for var in self._selected_variables
         }
         for sol in generate_combinations(var_val_gen):
-            var_val = {var._id_: sol[var][var._id_] for var in self._selected_variables}
-            yield OperationResult({**sources, **var_val}, False, self)
+            yield {var._id_: sol[var][var._id_] for var in self._selected_variables}
+
+    def _apply_results_mapping(
+        self, results: Iterable[Dict[int, HashedValue]]
+    ) -> Iterable[Dict[int, HashedValue]]:
+        for result_mapping in self._results_mapping:
+            results = result_mapping(results)
+        if self._order_by:
+            results = self._order_(results)
+        return results
 
     @cached_property
     def _all_variable_instances_(self) -> List[Variable]:

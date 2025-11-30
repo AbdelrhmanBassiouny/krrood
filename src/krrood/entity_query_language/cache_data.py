@@ -6,11 +6,14 @@ Cache utilities.
 This module provides caching datastructures and utilities.
 """
 from dataclasses import dataclass, field
-from typing_extensions import Dict
+from typing_extensions import Dict, TypeVar
+
+
+T = TypeVar("T")
 
 
 @dataclass
-class SeenSet:
+class SeenSet[T]:
     """
     Coverage index for previously seen partial assignments.
 

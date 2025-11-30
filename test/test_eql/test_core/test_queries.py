@@ -781,3 +781,16 @@ def test_unification_dict(handles_and_containers_world):
     query = a(set_of((drawer, handle), drawer.handle.name == handle.name))
     results = list(query.evaluate())
     assert results[0][drawer] is results[0][drawer_1]
+
+
+def test_distinct_entity():
+    names = ["Handle1", "Handle1", "Handle2", "Container1", "Container1", "Container3"]
+    body_name = let(str, domain=names)
+    query = an(
+        entity(
+            body_name,
+            body_name.startswith("Handle"),
+        ).distinct()
+    )
+    results = list(query.evaluate())
+    assert len(results) == 2
