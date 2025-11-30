@@ -758,6 +758,13 @@ def test_count(handles_and_containers_world):
     assert query.evaluate() == len([b for b in world.bodies if "Handle" in b.name])
 
 
+def test_order_by(handles_and_containers_world):
+    names = ["Handle1", "Handle1", "Handle2", "Container1", "Container1", "Container3"]
+    body_name = let(str, domain=names)
+    query = an(entity(body_name).order_by(variable=body_name, descending=False))
+    assert list(query.evaluate()) == sorted(names, reverse=False)
+
+
 def test_limit(handles_and_containers_world):
     world = handles_and_containers_world
     query = an(
@@ -794,3 +801,34 @@ def test_distinct_entity():
     )
     results = list(query.evaluate())
     assert len(results) == 2
+
+
+def test_distinct_set_of():
+    handle_names = ["Handle1", "Handle1", "Handle2"]
+    container_names = ["Container1", "Container1", "Container3"]
+    handle_name = let(str, domain=handle_names)
+    container_name = let(str, domain=container_names)
+    query = a(set_of((handle_name, container_name)).distinct())
+    results = list(query.evaluate())
+    assert len(results) == 4
+    assert set(tuple(r.values()) for r in results) == {
+        (handle_names[0], container_names[0]),
+        (handle_names[0], container_names[2]),
+        (handle_names[2], container_names[0]),
+        (handle_names[2], container_names[2]),
+    }
+
+
+def test_max_min_no_variable():
+    values = [2, 1, 3, 5, 4]
+    value = let(int, domain=values)
+
+    max_query = an(entity(value).max())
+    max_query_result = list(max_query.evaluate())
+    assert len(max_query_result) == 1
+    assert max_query_result[0] == max(values)
+
+    min_query = an(entity(value).min())
+    min_query_result = list(min_query.evaluate())
+    assert len(min_query_result) == 1
+    assert min_query_result[0] == min(values)

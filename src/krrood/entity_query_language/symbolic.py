@@ -783,7 +783,7 @@ class QueryObjectDescriptor(SymbolicExpression[T], ABC):
         self._results_mapping.append(get_distinct_results)
         return self
 
-    def max_(self, variable: Optional[CanBehaveLikeAVariable[T]] = None) -> Self:
+    def max(self, variable: Optional[CanBehaveLikeAVariable[T]] = None) -> Self:
         """
         Add a result mapping that maps the results to the result that has the maximum
         value for the given variable.
@@ -795,7 +795,7 @@ class QueryObjectDescriptor(SymbolicExpression[T], ABC):
 
         return self._max_or_min(variable, max_=True)
 
-    def min_(self, variable: Optional[CanBehaveLikeAVariable[T]] = None) -> Self:
+    def min(self, variable: Optional[CanBehaveLikeAVariable[T]] = None) -> Self:
         """
         Add a result mapping that maps the results to the result that has the minimum
         value for the given variable.
@@ -855,6 +855,23 @@ class QueryObjectDescriptor(SymbolicExpression[T], ABC):
             for conclusion in self._child_._conclusion_:
                 projection.update(conclusion._unique_variables_)
         return projection
+
+    def _order(
+        self, results: Iterable[Dict[int, HashedValue]] = None
+    ) -> Iterable[Dict[int, HashedValue]]:
+        """
+        Order the results by the given order variable.
+
+        :param results: The results to be ordered.
+        :return: The ordered results.
+        """
+        order_var, descending = self._order_by
+        results = sorted(
+            results,
+            key=lambda r: r[order_var._id_].value,
+            reverse=descending,
+        )
+        return results
 
     def _evaluate__(
         self,
