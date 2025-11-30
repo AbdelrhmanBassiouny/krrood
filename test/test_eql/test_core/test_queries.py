@@ -819,6 +819,20 @@ def test_distinct_set_of():
     }
 
 
+def test_distinct_on():
+    handle_names = ["Handle1", "Handle1", "Handle2"]
+    container_names = ["Container1", "Container1", "Container3"]
+    handle_name = let(str, domain=handle_names)
+    container_name = let(str, domain=container_names)
+    query = a(set_of((handle_name, container_name)).distinct(on=(handle_name,)))
+    results = list(query.evaluate())
+    assert len(results) == 2
+    assert set(tuple(r.values()) for r in results) == {
+        (handle_names[0], container_names[0]),
+        (handle_names[2], container_names[0]),
+    }
+
+
 def test_max_min_no_variable():
     values = [2, 1, 3, 5, 4]
     value = let(int, domain=values)

@@ -770,7 +770,7 @@ class QueryObjectDescriptor(SymbolicExpression[T], ABC):
         def get_distinct_results(
             results_gen: Iterable[Dict[int, HashedValue]],
         ) -> Iterable[Dict[int, HashedValue]]:
-            on_ids = [v._id_ for v in on] if on else []
+            on_ids = [v._var_._id_ for v in on] if on else []
             for res in results_gen:
                 bindings = (
                     res if not on else {k: v for k, v in res.items() if k in on_ids}
