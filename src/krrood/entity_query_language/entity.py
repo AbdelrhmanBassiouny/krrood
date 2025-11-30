@@ -70,7 +70,7 @@ def entity(
     selected_variables, expression = _extract_variables_and_expression(
         [selected_variable], *properties
     )
-    return Entity(selected_variables=selected_variables, _child_=expression)
+    return Entity(_selected_variables=selected_variables, _child_=expression)
 
 
 def set_of(
@@ -90,7 +90,7 @@ def set_of(
     selected_variables, expression = _extract_variables_and_expression(
         selected_variables, *properties
     )
-    return SetOf(selected_variables=selected_variables, _child_=expression)
+    return SetOf(_selected_variables=selected_variables, _child_=expression)
 
 
 def _extract_variables_and_expression(
