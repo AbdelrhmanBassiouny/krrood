@@ -388,6 +388,10 @@ class Selectable(SymbolicExpression[T], ABC):
     For example, this is the case for the ResultQuantifiers & QueryDescriptors that operate on a single selected
     variable.
     """
+    _selection_name_: str = field(default=None, kw_only=True)
+    """
+    The name of the selected variable to be used in the result.
+    """
 
     @property
     def _is_iterable_(self):
@@ -638,7 +642,15 @@ class UnificationDict(UserDict):
     A dictionary which maps all expressions that are on a single variable to the original variable id.
     """
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.name_value_map = {
+            v._selection_name_: v for v in args[0].keys() if v._selection_name_
+        }
+
     def __getitem__(self, key: CanBehaveLikeAVariable[T]) -> T:
+        if isinstance(key, str):
+            return self.name_value_map[key].value
         key = key._id_expression_map_[key._var_._id_]
         return super().__getitem__(key).value
 
@@ -676,6 +688,16 @@ class The(ResultQuantifier[T]):
             raise NoSolutionFound(self)
         except GreaterThanExpectedNumberOfSolutions:
             raise MultipleSolutionFound(self)
+
+
+@dataclass(eq=False, repr=False)
+class Count(ResultQuantifier[T]):
+    """Quantifier that returns the number of matching results."""
+
+    def evaluate(
+        self,
+    ) -> TypingUnion[T, Dict[TypingUnion[T, SymbolicExpression[T]], T]]:
+        return len(list(super().evaluate()))
 
 
 @dataclass(eq=False, repr=False)

@@ -54,7 +54,9 @@ def test_match(handles_and_containers_world):
 
 def test_select(handles_and_containers_world):
     world = handles_and_containers_world
-    container, handle = select(Container), select(Handle)
+    container, handle = select(Container, name="container"), select(
+        Handle, name="handle"
+    )
     fixed_connection_query = the(
         entity_matching(FixedConnection, world.connections)(
             parent=container(name="Container1"),
@@ -68,6 +70,8 @@ def test_select(handles_and_containers_world):
     assert isinstance(answers, UnificationDict)
     assert answers[container].name == "Container1"
     assert answers[handle].name == "Handle1"
+    assert answers["container"].name == "Container1"
+    assert answers["handle"].name == "Handle1"
 
 
 @pytest.fixture

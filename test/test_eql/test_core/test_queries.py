@@ -15,7 +15,7 @@ from krrood.entity_query_language.entity import (
     exists,
     flatten,
 )
-from krrood.entity_query_language.quantify_entity import an, a, the
+from krrood.entity_query_language.quantify_entity import an, a, the, count
 from krrood.entity_query_language.failures import (
     MultipleSolutionFound,
     UnsupportedNegation,
@@ -743,3 +743,14 @@ def test_quantified_query(handles_and_containers_world):
         list(get_quantified_query(Exactly(2)).evaluate())
     with pytest.raises(LessThanExpectedNumberOfSolutions):
         list(get_quantified_query(Exactly(4)).evaluate())
+
+
+def test_count(handles_and_containers_world):
+    world = handles_and_containers_world
+    query = count(
+        entity(
+            body := let(type_=Body, domain=world.bodies),
+            contains(body.name, "Handle"),
+        )
+    )
+    assert query.evaluate() == len([b for b in world.bodies if "Handle" in b.name])

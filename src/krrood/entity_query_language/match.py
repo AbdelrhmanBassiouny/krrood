@@ -341,6 +341,7 @@ class Select(Match[T], Selectable[T]):
 
     _var_: CanBehaveLikeAVariable[T] = field(init=False)
     is_selected: bool = field(init=False, default=True)
+    name: Optional[str] = field(default=None, kw_only=True)
 
     def __post_init__(self):
         """
@@ -357,12 +358,28 @@ class Select(Match[T], Selectable[T]):
         super()._resolve(variable, parent)
         if not self._var_:
             self.update_selected_variable(self.variable)
+        self.update_name()
 
     def update_selected_variable(self, variable: CanBehaveLikeAVariable):
         """
         Update the selected variable with the given one.
         """
         self._var_ = variable
+
+    def update_name(self):
+        """
+        Update the name of the select based on the name of the selected variable.
+        """
+        if not self.name:
+            if isinstance(self._var_, Flatten):
+                self.name = self._var_._child_._name_
+            elif isinstance(self._var_, Attribute):
+                self.name = self._var_._attr_name_
+            else:
+                self.name = self._var_._name_.lower()
+        if self.name:
+            self._selection_name_ = self.name
+            self._var_._selection_name_ = self.name
 
     def _evaluate__(
         self,
@@ -417,11 +434,12 @@ def match_all(
 
 def select(
     type_: Union[Type[T], CanBehaveLikeAVariable[T], Any, None] = None,
+    name: Optional[str] = None,
 ) -> Union[Type[T], CanBehaveLikeAVariable[T], Select[T]]:
     """
     Equivalent to match(type_) and selecting the variable to be included in the result.
     """
-    return _match_or_select(Select, type_)
+    return _match_or_select(Select, type_, name=name)
 
 
 def select_any(
@@ -474,6 +492,7 @@ def _match_or_select(
     match_type: Type[Match],
     type_: Union[Type[T], CanBehaveLikeAVariable[T], Any, None] = None,
     domain: Optional[DomainType] = None,
+    **kwargs,
 ) -> Union[Type[T], CanBehaveLikeAVariable[T], Match[T]]:
     """
     Create and return a Match/Select instance that looks for the pattern provided by the type and the
@@ -484,10 +503,10 @@ def _match_or_select(
     :param domain: The domain used for the variable created by the match.
     """
     if isinstance(type_, CanBehaveLikeAVariable):
-        return match_type(type_._type_, domain=domain, variable=type_)
+        return match_type(type_._type_, domain=domain, variable=type_, **kwargs)
     elif type_ and not isinstance(type_, type):
-        return match_type(type_, domain=domain, variable=Literal(type_))
-    return match_type(type_)
+        return match_type(type_, domain=domain, variable=Literal(type_), **kwargs)
+    return match_type(type_, domain=domain, **kwargs)
 
 
 EntityType = Union[SetOf[T], Entity[T], T, Iterable[T], Type[T], Match[T]]

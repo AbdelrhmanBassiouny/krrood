@@ -7,7 +7,7 @@ from .match import EntityType, Match
 from .result_quantification_constraint import (
     ResultQuantificationConstraint,
 )
-from .symbolic import An, The, ResultQuantifier
+from .symbolic import An, The, ResultQuantifier, Count
 
 
 def an(
@@ -42,6 +42,19 @@ def the(
     :rtype: The[T]
     """
     return _quantify_entity(The, entity_)
+
+
+def count(
+    entity_: EntityType,
+) -> Union[Count[T], T]:
+    """
+    Count the number of elements satisfying the given entity description.
+
+    :param entity_: An entity or a set expression to quantify over.
+    :return: A quantifier representing "an" element.
+    :rtype: The[T]
+    """
+    return _quantify_entity(Count, entity_)
 
 
 def _quantify_entity(
