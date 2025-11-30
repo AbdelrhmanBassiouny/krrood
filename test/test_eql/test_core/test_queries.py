@@ -833,7 +833,7 @@ def test_distinct_on():
     container_names = ["Container1", "Container1", "Container3"]
     handle_name = let(str, domain=handle_names)
     container_name = let(str, domain=container_names)
-    query = a(set_of((handle_name, container_name)).distinct(on=(handle_name,)))
+    query = a(set_of((handle_name, container_name)).distinct(handle_name))
     results = list(query.evaluate())
     assert len(results) == 2
     assert set(tuple(r.values()) for r in results) == {

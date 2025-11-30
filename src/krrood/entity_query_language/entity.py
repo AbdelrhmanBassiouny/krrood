@@ -121,7 +121,7 @@ def let(
     type_: Type[T],
     domain: DomainType,
     name: Optional[str] = None,
-) -> Union[T, CanBehaveLikeAVariable[T], Variable[T], Selectable[T]]:
+) -> Union[T, Selectable[T]]:
     """
     Declare a symbolic variable that can be used inside queries.
 

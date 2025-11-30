@@ -760,7 +760,8 @@ class QueryObjectDescriptor(SymbolicExpression[T], ABC):
         return self
 
     def distinct(
-        self, on: TypingUnion[Selectable, Tuple[Selectable, ...], None] = None
+        self,
+        *on: Selectable[T],
     ) -> Self:
         """
         Apply distinctness constraint to the query object descriptor results.
@@ -768,7 +769,6 @@ class QueryObjectDescriptor(SymbolicExpression[T], ABC):
         :param on: The variables to be used for distinctness.
         :return: This query object descriptor.
         """
-        on = make_list(on) if on else []
 
         def get_distinct_results(
             results_gen: Iterable[Dict[int, HashedValue]],
