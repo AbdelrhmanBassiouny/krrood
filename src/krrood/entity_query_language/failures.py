@@ -96,6 +96,22 @@ class UsageError(DataclassException):
 
 
 @dataclass
+class NonPositiveLimitValue(UsageError):
+    """
+    Raised when a limit value for the query results is not positive.
+    """
+
+    wrong_limit_value: int
+
+    def __post_init__(self):
+        self.message = (
+            f"Quantifier limit value must be a non positive integer (i.e., greater than 0),"
+            f" instead got {self.wrong_limit_value}"
+        )
+        super().__post_init__()
+
+
+@dataclass
 class UnsupportedOperation(UsageError):
     """
     Raised when an operation is not supported by the entity query language API.

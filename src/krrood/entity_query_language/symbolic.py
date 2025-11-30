@@ -44,6 +44,8 @@ from .failures import (
     LessThanExpectedNumberOfSolutions,
     InvalidEntityType,
     UnSupportedOperand,
+    UsageError,
+    NonPositiveLimitValue,
 )
 from .hashed_data import HashedValue, HashedIterable, T
 from .result_quantification_constraint import (
@@ -659,7 +661,24 @@ class UnificationDict(UserDict):
 class An(ResultQuantifier[T]):
     """Quantifier that yields all matching results one by one."""
 
-    ...
+    def evaluate(
+        self,
+        limit: Optional[int] = None,
+    ) -> Iterable[TypingUnion[T, Dict[TypingUnion[T, SymbolicExpression[T]], T]]]:
+        """
+        Evaluate the query and map the results to the correct output data structure.
+        This is the exposed evaluation method for users.
+        """
+        results = super().evaluate()
+        if limit is None:
+            yield from results
+        elif not isinstance(limit, int) or limit <= 0:
+            raise NonPositiveLimitValue(limit)
+        else:
+            for res_num, result in enumerate(results, 1):
+                yield result
+                if res_num == limit:
+                    return
 
 
 @dataclass(eq=False, repr=False)

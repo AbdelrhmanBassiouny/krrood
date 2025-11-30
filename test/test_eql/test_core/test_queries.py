@@ -21,6 +21,7 @@ from krrood.entity_query_language.failures import (
     UnsupportedNegation,
     GreaterThanExpectedNumberOfSolutions,
     LessThanExpectedNumberOfSolutions,
+    NonPositiveLimitValue,
 )
 from krrood.entity_query_language.predicate import (
     HasType,
@@ -754,3 +755,19 @@ def test_count(handles_and_containers_world):
         )
     )
     assert query.evaluate() == len([b for b in world.bodies if "Handle" in b.name])
+
+
+def test_limit(handles_and_containers_world):
+    world = handles_and_containers_world
+    query = an(
+        entity(
+            body := let(type_=Body, domain=world.bodies), contains(body.name, "Handle")
+        )
+    )
+    assert len(list(query.evaluate(limit=2))) == 2
+    assert len(list(query.evaluate(limit=1))) == 1
+    assert len(list(query.evaluate(limit=3))) == 3
+    with pytest.raises(NonPositiveLimitValue):
+        list(query.evaluate(limit=0))
+    with pytest.raises(NonPositiveLimitValue):
+        list(query.evaluate(limit="0"))
