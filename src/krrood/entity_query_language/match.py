@@ -475,17 +475,19 @@ def entity_matching(
 
 
 def entity_selection(
-    type_: Union[Type[T], CanBehaveLikeAVariable[T]], domain: DomainType
+    type_: Union[Type[T], CanBehaveLikeAVariable[T]],
+    domain: DomainType,
+    name: Optional[str] = None,
 ) -> Union[Type[T], CanBehaveLikeAVariable[T], Select[T]]:
     """
     Same as :py:func:`krrood.entity_query_language.match.entity_matching` but also selecting the variable to be
      included in the result.
     """
     if isinstance(type_, CanBehaveLikeAVariable):
-        return Select(type_._type_, domain=domain, variable=type_)
+        return Select(type_._type_, domain=domain, variable=type_, name=name)
     elif type_ and not isinstance(type_, type):
-        return Select(type_, domain=domain, variable=Literal(type_))
-    return Select(type_, domain=domain)
+        return Select(type_, domain=domain, variable=Literal(type_), name=name)
+    return Select(type_, domain=domain, name=name)
 
 
 EntityType = Union[SetOf[T], Entity[T], T, Iterable[T], Type[T], Match[T]]
